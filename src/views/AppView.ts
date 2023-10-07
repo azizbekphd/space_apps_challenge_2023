@@ -62,7 +62,7 @@ export class AppView implements MVCView, Runnable {
         this.app.config.moon.generalView.colorMap.path),
       displacementMap: new THREE.TextureLoader().load(
         this.app.config.moon.generalView.displacementMap.path),
-      displacementScale: 1,
+      displacementScale: 3,
     });
     const moonMesh = new THREE.Mesh(moonGeometry, moonMaterial);
     moonMesh.position.set(0, 0, 0);
