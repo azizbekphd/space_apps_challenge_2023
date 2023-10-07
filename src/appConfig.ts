@@ -1,4 +1,6 @@
 import * as THREE from "three";
+import moon_color_map from "../public/textures/moon_color_map.jpg";
+import moon_height_map from "../public/textures/moon_height_map.jpg";
 
 const appConfig = {
   camera: {
@@ -39,10 +41,10 @@ const appConfig = {
       widthSegments: 1024,
       heightSegments: 1024,
       colorMap: {
-        path: "/textures/moon_color_map.jpg",
+        path: moon_color_map,
       },
       displacementMap: {
-        path: "/textures/moon_height_map.jpg",
+        path: moon_height_map,
       }
     },
   }
