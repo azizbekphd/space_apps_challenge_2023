@@ -6,6 +6,8 @@ const appConfig = {
   camera: {
     angle: Math.PI / 6,
     distance: 100,
+    minDistance: 50,
+    maxDistance: 200,
   },
 
   lights: (() => {

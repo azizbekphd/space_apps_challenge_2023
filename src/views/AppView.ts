@@ -41,6 +41,8 @@ export class AppView implements MVCView, Runnable {
     this.visuals.camera.position.x = Math.cos(cameraAngle) * cameraDistance;
     this.visuals.camera.position.y = Math.sin(cameraAngle) * cameraDistance;
     this.visuals.camera.lookAt(new THREE.Vector3(0, 0, 0));
+    this.visuals.controls!.minDistance = this.app.config.camera.minDistance;
+    this.visuals.controls!.maxDistance = this.app.config.camera.maxDistance;
     this.visuals.scene.add(this.visuals.camera);
   }
 
