@@ -17,7 +17,7 @@ const appConfig = {
       new THREE.Color(0xffffff),
       1,
     );
-    sunlight.position.set(300, 0, 0);
+    sunlight.position.set(0, 0, 300);
     const sunlightColor = 0xfdfbd8;
     const sun = new THREE.Mesh(
       new THREE.SphereGeometry(1, 64, 64),

@@ -88,6 +88,7 @@ export class AppView implements MVCView, Runnable {
     const moonMesh = new THREE.Mesh(moonGeometry, moonMaterial);
     moonMesh.name = ThreeNamedObjects.moon;
     moonMesh.position.set(0, 0, 0);
+    moonMesh.rotateY(-Math.PI / 2);
     moonMesh.castShadow = true;
     this.visuals.scene.add(moonMesh);
   }
