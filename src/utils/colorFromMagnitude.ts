@@ -20,7 +20,12 @@ export const colorFromMagnitude: (m: number, maxM: number) => THREE.Color = (m, 
     b = 255;
   }
 
-  const color = new THREE.Color(r, g, b);
+  const color = new THREE.Color(
+    "#" +
+    r.toString(16).padStart(2, '0') +
+    g.toString(16).padStart(2, '0') +
+    b.toString(16).padStart(2, '0')
+  );
   return color;
 }
 
