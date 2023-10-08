@@ -1,10 +1,10 @@
 import * as THREE from "three";
-import moon_color_map from "../public/textures/moon_color_map.jpg";
-import moon_height_map from "../public/textures/moon_height_map.jpg";
+import moon_color_map from "/textures/moon_color_map.jpg";
+import moon_height_map from "/textures/moon_height_map.jpg";
 
 const appConfig = {
   camera: {
-    angle: Math.PI / 6,
+    angle: Math.PI / 9,
     distance: 100,
     minDistance: 50,
     maxDistance: 200,

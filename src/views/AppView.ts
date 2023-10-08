@@ -4,12 +4,24 @@ import { App } from "../types/App";
 import { MVCView } from "../types/MVCView";
 import { Runnable } from "../types/Runnable";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
+import { GUI } from "dat.gui";
 
 interface ThreeVisuals {
   scene: THREE.Scene;
   camera: THREE.PerspectiveCamera;
   renderer: THREE.WebGLRenderer;
   controls?: OrbitControls;
+  gui?: GUI;
+}
+
+enum ThreeNamedObjects {
+  axesHelper = "axesHelper",
+  moon = "moon",
+}
+
+type GUIFields = {
+  axesHelper: boolean,
+  reliefScale: number,
 }
 
 export class AppView implements MVCView, Runnable {
@@ -38,7 +50,7 @@ export class AppView implements MVCView, Runnable {
   setupCamera() {
     const cameraAngle = this.app.config.camera.angle;
     const cameraDistance = this.app.config.camera.distance;
-    this.visuals.camera.position.x = Math.cos(cameraAngle) * cameraDistance;
+    this.visuals.camera.position.z = Math.cos(cameraAngle) * cameraDistance;
     this.visuals.camera.position.y = Math.sin(cameraAngle) * cameraDistance;
     this.visuals.camera.lookAt(new THREE.Vector3(0, 0, 0));
     this.visuals.controls!.minDistance = this.app.config.camera.minDistance;
@@ -66,15 +78,45 @@ export class AppView implements MVCView, Runnable {
         this.app.config.moon.generalView.displacementMap.path),
       displacementScale: 3,
     });
+    moonMaterial.needsUpdate = true;
     const moonMesh = new THREE.Mesh(moonGeometry, moonMaterial);
+    moonMesh.name = ThreeNamedObjects.moon;
     moonMesh.position.set(0, 0, 0);
     moonMesh.castShadow = true;
     this.visuals.scene.add(moonMesh);
   }
 
+  setupHelpers() {
+    const axesHelper = new THREE.AxesHelper(50);
+    axesHelper.name = ThreeNamedObjects.axesHelper;
+    axesHelper.visible = true;
+    this.visuals.scene.add(axesHelper);
+  }
+
   setupObjects() {
     this.setupLights();
     this.setupMoon();
+    this.setupHelpers();
+  }
+
+  setupGUI() {
+    const fields: GUIFields = {
+      axesHelper: true,
+      reliefScale: 3,
+    }
+
+    this.visuals.gui = new GUI();
+    const generalFolder = this.visuals.gui?.addFolder("General");
+    const axesHelper = this.visuals.scene.getObjectByName(ThreeNamedObjects.axesHelper)!;
+    generalFolder.add(fields, "axesHelper").onChange(visible => {
+      axesHelper.visible = visible;
+    });
+    generalFolder.add(fields, "reliefScale", 0, 10).onChange(scale => {
+      const moon = this.visuals.scene.getObjectByName(ThreeNamedObjects.moon) as THREE.Mesh;
+      (moon.material as THREE.MeshStandardMaterial).displacementScale = scale;
+    });
+
+    this.visuals.gui?.open();
   }
 
   animate() {
@@ -88,7 +130,7 @@ export class AppView implements MVCView, Runnable {
     this.setupRenderer();
     this.setupCamera();
     this.setupObjects();
-    console.log(this.visuals.scene);
+    this.setupGUI();
   }
 
   run() {
