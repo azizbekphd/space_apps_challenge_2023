@@ -4,7 +4,7 @@ import moon_height_map from "/textures/moon_height_map.jpg";
 
 const appConfig = {
   camera: {
-    angle: Math.PI / 9,
+    angle: Math.PI / 10,
     distance: 100,
     minDistance: 50,
     maxDistance: 200,

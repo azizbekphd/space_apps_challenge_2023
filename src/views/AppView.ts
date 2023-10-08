@@ -5,6 +5,9 @@ import { MVCView } from "../types/MVCView";
 import { Runnable } from "../types/Runnable";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import { GUI } from "dat.gui";
+import { colorFromMagnitude } from "../utils/colorFromMagnitude";
+import { degreesToRadians } from "../utils/degreesToRadians";
+import { quakeInfo } from "../templates/quakeInfo";
 
 interface ThreeVisuals {
   scene: THREE.Scene;
@@ -12,15 +15,18 @@ interface ThreeVisuals {
   renderer: THREE.WebGLRenderer;
   controls?: OrbitControls;
   gui?: GUI;
+  guiApp?: Element;
 }
 
 enum ThreeNamedObjects {
   axesHelper = "axesHelper",
   moon = "moon",
+  quake = "quake:",
 }
 
 type GUIFields = {
   axesHelper: boolean,
+  quakes: boolean,
   reliefScale: number,
 }
 
@@ -86,6 +92,27 @@ export class AppView implements MVCView, Runnable {
     this.visuals.scene.add(moonMesh);
   }
 
+  setupQuakes() {
+    this.app.model.quakes.forEach(quake => {
+      const quakeMesh = new THREE.Mesh(
+        new THREE.BoxGeometry(.5, .5, 8),
+        new THREE.MeshToonMaterial({
+          color: colorFromMagnitude(quake.magnitude, 4),
+        }),
+      );
+      quakeMesh.name = ThreeNamedObjects.quake + quake._id;
+      const r = this.app.config.moon.generalView.radius;
+      const c = {lat: quake.latitude, lon: quake.longitude}
+      quakeMesh.position.set(
+        r * Math.sin(Math.PI / 2 - degreesToRadians(c.lat)) * Math.sin(degreesToRadians(c.lon)),
+        r * Math.cos(Math.PI / 2 - degreesToRadians(c.lat)),
+        r * Math.sin(Math.PI / 2 - degreesToRadians(c.lat)) * Math.cos(degreesToRadians(c.lon)),
+      );
+      quakeMesh.lookAt(0, 0, 0);
+      this.visuals.scene.add(quakeMesh);
+    });
+  }
+
   setupHelpers() {
     const axesHelper = new THREE.AxesHelper(50);
     axesHelper.name = ThreeNamedObjects.axesHelper;
@@ -96,12 +123,14 @@ export class AppView implements MVCView, Runnable {
   setupObjects() {
     this.setupLights();
     this.setupMoon();
+    this.setupQuakes();
     this.setupHelpers();
   }
 
   setupGUI() {
     const fields: GUIFields = {
       axesHelper: true,
+      quakes: true,
       reliefScale: 3,
     }
 
@@ -111,12 +140,59 @@ export class AppView implements MVCView, Runnable {
     generalFolder.add(fields, "axesHelper").onChange(visible => {
       axesHelper.visible = visible;
     });
+    generalFolder.add(fields, "quakes").onChange(visible => {
+      this.app.model.quakes.forEach(quake => {
+        this.visuals.scene.getObjectByName(
+          ThreeNamedObjects.quake + quake._id,
+        )!.visible = visible;
+      })
+    });
     generalFolder.add(fields, "reliefScale", 0, 10).onChange(scale => {
       const moon = this.visuals.scene.getObjectByName(ThreeNamedObjects.moon) as THREE.Mesh;
       (moon.material as THREE.MeshStandardMaterial).displacementScale = scale;
     });
 
     this.visuals.gui?.open();
+  }
+  
+  setupListeners() {
+    const raycaster = new THREE.Raycaster();
+    this.visuals.renderer.domElement.onmousemove = (e) => {
+      const x = ( e.clientX / window.innerWidth ) * 2 - 1;
+			const y = - ( e.clientY / window.innerHeight ) * 2 + 1;
+
+			raycaster.setFromCamera( new THREE.Vector2(x, y), this.visuals.camera );
+      const quakes = this.app.model.quakes.map(quake => {
+        return this.visuals.scene.getObjectByName(
+          ThreeNamedObjects.quake + quake._id,
+        )!;
+      })
+			const intersects = raycaster.intersectObjects( quakes, false );
+      let pointedObject: string | undefined;
+			if ( intersects.length > 0 ) {
+        const quakeMesh = intersects[0].object;
+        pointedObject = quakeMesh.uuid;
+        quakeMesh.scale.set(1.2, 1.2, 1.2);
+        const quakeId = quakeMesh.name.split(":")[1];
+        const quake = this.app.model.quakes.find(q => q._id == quakeId);
+        this.visuals.guiApp!.innerHTML = quakeInfo(quake, {x: e.pageX, y: e.pageY});
+			} else {
+        this.visuals.guiApp!.innerHTML = "";
+      }
+      this.app.model.quakes.forEach(quake => {
+        const q = this.visuals.scene.getObjectByName(
+          ThreeNamedObjects.quake + quake._id,
+        )!;
+        if (q.uuid != pointedObject) q.scale.set(1, 1, 1);
+      })
+    }
+  }
+
+  setupGUIApp() {
+    this.visuals.guiApp = document.createElement("div");
+    this.visuals.guiApp.id = "app";
+    document.body.appendChild(this.visuals.guiApp);
+    this.setupListeners();
   }
 
   animate() {
@@ -131,6 +207,7 @@ export class AppView implements MVCView, Runnable {
     this.setupCamera();
     this.setupObjects();
     this.setupGUI();
+    this.setupGUIApp();
   }
 
   run() {
