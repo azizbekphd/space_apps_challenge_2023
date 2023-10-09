@@ -96,20 +96,13 @@ export class AppView implements MVCView, Runnable {
   setupQuakes() {
     this.app.model.quakes.forEach(quake => {
       const quakeMesh = new THREE.Mesh(
-        new THREE.BoxGeometry(.5, .5, 8),
+        new THREE.BoxGeometry(.5, .5, 4),
         new THREE.MeshToonMaterial({
           color: colorFromMagnitude(quake.magnitude, 4),
         }),
       );
       quakeMesh.name = ThreeNamedObjects.quake + quake._id;
-      const r = this.app.config.moon.generalView.radius;
-      const c = {lat: quake.latitude, lon: quake.longitude}
-      quakeMesh.position.set(
-        r * Math.sin(Math.PI / 2 - degreesToRadians(c.lat)) * Math.sin(degreesToRadians(c.lon)),
-        r * Math.cos(Math.PI / 2 - degreesToRadians(c.lat)),
-        r * Math.sin(Math.PI / 2 - degreesToRadians(c.lat)) * Math.cos(degreesToRadians(c.lon)),
-      );
-      quakeMesh.lookAt(0, 0, 0);
+      this.updateQuakesPositions(quake, quakeMesh);
       this.visuals.scene.add(quakeMesh);
     });
   }
@@ -163,7 +156,7 @@ export class AppView implements MVCView, Runnable {
 			const y = - ( e.clientY / window.innerHeight ) * 2 + 1;
 
 			raycaster.setFromCamera( new THREE.Vector2(x, y), this.visuals.camera );
-      const quakes = this.app.model.quakes.map(quake => {
+      const quakes = this.app.model.quakes.map<THREE.Object3D>(quake => {
         return this.visuals.scene.getObjectByName(
           ThreeNamedObjects.quake + quake._id,
         )!;
@@ -194,6 +187,17 @@ export class AppView implements MVCView, Runnable {
     this.visuals.guiApp.id = "app";
     document.body.appendChild(this.visuals.guiApp);
     this.setupListeners();
+  }
+
+  updateQuakesPositions(quake: {latitude: number, longitude: number}, quakeMesh: THREE.Mesh) {
+      const r = this.app.config.moon.generalView.radius + 2;
+      const c = {lat: quake.latitude, lon: quake.longitude}
+      quakeMesh.position.set(
+        r * Math.sin(Math.PI / 2 - degreesToRadians(c.lat)) * Math.sin(degreesToRadians(c.lon)),
+        r * Math.cos(Math.PI / 2 - degreesToRadians(c.lat)),
+        r * Math.sin(Math.PI / 2 - degreesToRadians(c.lat)) * Math.cos(degreesToRadians(c.lon)),
+      );
+      quakeMesh.lookAt(0, 0, 0);
   }
 
   animate() {
