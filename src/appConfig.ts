@@ -8,6 +8,8 @@ const appConfig = {
     distance: 100,
     minDistance: 50,
     maxDistance: 200,
+    zoomSpeed: 0.3,
+    rotateSpeed: 0.3,
   },
 
   lights: (() => {
@@ -49,6 +51,10 @@ const appConfig = {
         path: moon_height_map,
       }
     },
+  },
+
+  quakes: {
+    markerHeight: 4,
   }
 }
 

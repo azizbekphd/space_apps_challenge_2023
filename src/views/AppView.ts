@@ -24,10 +24,20 @@ enum ThreeNamedObjects {
   quake = "quake:",
 }
 
+enum GUIFieldNames {
+  axesHelper = "Axes helper",
+  quakes = "Quakes",
+  reliefScale = "Relief scale",
+  ambientLightIntensity = "Ambient light",
+  directionalLightIntensity = "Directional light",
+}
+
 type GUIFields = {
-  axesHelper: boolean,
-  quakes: boolean,
-  reliefScale: number,
+  [GUIFieldNames.axesHelper]: boolean,
+  [GUIFieldNames.quakes]: boolean,
+  [GUIFieldNames.reliefScale]: number,
+  [GUIFieldNames.ambientLightIntensity]: number,
+  [GUIFieldNames.directionalLightIntensity]: number,
 }
 
 export class AppView implements MVCView, Runnable {
@@ -61,6 +71,8 @@ export class AppView implements MVCView, Runnable {
     this.visuals.camera.lookAt(new THREE.Vector3(0, 0, 0));
     this.visuals.controls!.minDistance = this.app.config.camera.minDistance;
     this.visuals.controls!.maxDistance = this.app.config.camera.maxDistance;
+    this.visuals.controls!.zoomSpeed = this.app.config.camera.zoomSpeed;
+    this.visuals.controls!.rotateSpeed = this.app.config.camera.rotateSpeed;
     this.visuals.scene.add(this.visuals.camera);
   }
 
@@ -96,9 +108,13 @@ export class AppView implements MVCView, Runnable {
   setupQuakes() {
     this.app.model.quakes.forEach(quake => {
       const quakeMesh = new THREE.Mesh(
-        new THREE.BoxGeometry(.5, .5, 4),
+        new THREE.BoxGeometry(.5, .5, this.app.config.quakes.markerHeight),
         new THREE.MeshToonMaterial({
-          color: colorFromMagnitude(quake.magnitude, 4),
+          color: colorFromMagnitude(
+            quake.magnitude,
+            this.app.model.quakes.reduce<any>((a, b) =>
+                Math.max(a.magnitude, b.magnitude), {magnitude: 0}).magnitude
+          ),
         }),
       );
       quakeMesh.name = ThreeNamedObjects.quake + quake._id;
@@ -123,27 +139,41 @@ export class AppView implements MVCView, Runnable {
 
   setupGUI() {
     const fields: GUIFields = {
-      axesHelper: true,
-      quakes: true,
-      reliefScale: 3,
+      [GUIFieldNames.axesHelper]: true,
+      [GUIFieldNames.quakes]: true,
+      [GUIFieldNames.reliefScale]: 3,
+      [GUIFieldNames.ambientLightIntensity]: 0.02,
+      [GUIFieldNames.directionalLightIntensity]: 1,
     }
 
     this.visuals.gui = new GUI();
     const generalFolder = this.visuals.gui?.addFolder("General");
     const axesHelper = this.visuals.scene.getObjectByName(ThreeNamedObjects.axesHelper)!;
-    generalFolder.add(fields, "axesHelper").onChange(visible => {
+    generalFolder.add(fields, GUIFieldNames.axesHelper).onChange(visible => {
       axesHelper.visible = visible;
     });
-    generalFolder.add(fields, "quakes").onChange(visible => {
+    generalFolder.add(fields, GUIFieldNames.quakes).onChange(visible => {
       this.app.model.quakes.forEach(quake => {
         this.visuals.scene.getObjectByName(
           ThreeNamedObjects.quake + quake._id,
         )!.visible = visible;
       })
     });
-    generalFolder.add(fields, "reliefScale", 0, 10).onChange(scale => {
+    generalFolder.add(fields, GUIFieldNames.reliefScale, 0, 8).onChange(scale => {
       const moon = this.visuals.scene.getObjectByName(ThreeNamedObjects.moon) as THREE.Mesh;
       (moon.material as THREE.MeshStandardMaterial).displacementScale = scale;
+    });
+
+    const lightsFolder = this.visuals.gui?.addFolder("Lights");
+    lightsFolder.add(fields, GUIFieldNames.ambientLightIntensity, 0, 2, 0.02).onChange(intensity => {
+      const ambientLight =
+        this.visuals.scene.getObjectByProperty("type", "AmbientLight") as THREE.AmbientLight;
+      ambientLight.intensity = intensity;
+    });
+    lightsFolder.add(fields, GUIFieldNames.directionalLightIntensity, 0, 2, 0.02).onChange(intensity => {
+      const ambientLight =
+        this.visuals.scene.getObjectByProperty("type", "DirectionalLight") as THREE.DirectionalLight;
+      ambientLight.intensity = intensity;
     });
 
     this.visuals.gui?.open();
@@ -180,6 +210,12 @@ export class AppView implements MVCView, Runnable {
         if (q.uuid != pointedObject) q.scale.set(1, 1, 1);
       })
     }
+    
+    window.onresize = () => {
+      this.visuals.camera.aspect = window.innerWidth / window.innerHeight;
+      this.visuals.camera.updateProjectionMatrix();
+      this.visuals.renderer.setSize(window.innerWidth, window.innerHeight);
+    }
   }
 
   setupGUIApp() {
@@ -190,7 +226,7 @@ export class AppView implements MVCView, Runnable {
   }
 
   updateQuakesPositions(quake: {latitude: number, longitude: number}, quakeMesh: THREE.Mesh) {
-      const r = this.app.config.moon.generalView.radius + 2;
+      const r = this.app.config.moon.generalView.radius + this.app.config.quakes.markerHeight / 2;
       const c = {lat: quake.latitude, lon: quake.longitude}
       quakeMesh.position.set(
         r * Math.sin(Math.PI / 2 - degreesToRadians(c.lat)) * Math.sin(degreesToRadians(c.lon)),
