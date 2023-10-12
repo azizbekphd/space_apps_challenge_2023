@@ -7,20 +7,26 @@ import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import { GUI } from "dat.gui";
 import { colorFromMagnitude } from "../utils/colorFromMagnitude";
 import { degreesToRadians } from "../utils/degreesToRadians";
-import { quakeInfo } from "../templates/quakeInfo";
+import { appTemplates } from "../templates";
+import gsap from "gsap";
+
+enum AppComponents {
+  quakeInfo = "quakeInfo",
+}
 
 interface ThreeVisuals {
   scene: THREE.Scene;
   camera: THREE.PerspectiveCamera;
   renderer: THREE.WebGLRenderer;
+  guiComponents: {[key in AppComponents]?: Element};
   controls?: OrbitControls;
   gui?: GUI;
-  guiApp?: Element;
 }
 
 enum ThreeNamedObjects {
   axesHelper = "axesHelper",
   moon = "moon",
+  moonHelper = "moonHelper",
   quake = "quake:",
 }
 
@@ -50,6 +56,7 @@ export class AppView implements MVCView, Runnable {
       scene: new THREE.Scene(),
       camera: new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 1000),
       renderer: new THREE.WebGLRenderer(),
+      guiComponents: {},
     }
     this.visuals.controls = new OrbitControls(this.visuals.camera, this.visuals.renderer.domElement);
     this.animate = this.animate.bind(this);
@@ -94,7 +101,7 @@ export class AppView implements MVCView, Runnable {
         this.app.config.moon.generalView.colorMap.path),
       displacementMap: new THREE.TextureLoader().load(
         this.app.config.moon.generalView.displacementMap.path),
-      displacementScale: 3,
+      displacementScale: 1,
     });
     moonMaterial.needsUpdate = true;
     const moonMesh = new THREE.Mesh(moonGeometry, moonMaterial);
@@ -103,6 +110,20 @@ export class AppView implements MVCView, Runnable {
     moonMesh.rotateY(-Math.PI / 2);
     moonMesh.castShadow = true;
     this.visuals.scene.add(moonMesh);
+
+    const moonHelperGeometry = new THREE.SphereGeometry(
+      config.helperRadius,
+      config.helperWidthSegments,
+      config.helperHeightSegments,
+    );
+    const moonHelperMaterial = new THREE.MeshBasicMaterial({
+      transparent: true,
+      opacity: 0,
+    });
+    const moonHelperMesh = new THREE.Mesh(moonHelperGeometry, moonHelperMaterial);
+    moonHelperMesh.name = ThreeNamedObjects.moonHelper;
+    moonHelperMesh.position.set(0, 0, 0);
+    this.visuals.scene.add(moonHelperMesh)
   }
 
   setupQuakes() {
@@ -141,7 +162,7 @@ export class AppView implements MVCView, Runnable {
     const fields: GUIFields = {
       [GUIFieldNames.axesHelper]: true,
       [GUIFieldNames.quakes]: true,
-      [GUIFieldNames.reliefScale]: 3,
+      [GUIFieldNames.reliefScale]: 1,
       [GUIFieldNames.ambientLightIntensity]: 0.02,
       [GUIFieldNames.directionalLightIntensity]: 1,
     }
@@ -162,6 +183,7 @@ export class AppView implements MVCView, Runnable {
     generalFolder.add(fields, GUIFieldNames.reliefScale, 0, 8).onChange(scale => {
       const moon = this.visuals.scene.getObjectByName(ThreeNamedObjects.moon) as THREE.Mesh;
       (moon.material as THREE.MeshStandardMaterial).displacementScale = scale;
+      (moon.material as THREE.MeshStandardMaterial).displacementBias = - scale / 2;
     });
 
     const lightsFolder = this.visuals.gui?.addFolder("Lights");
@@ -181,27 +203,36 @@ export class AppView implements MVCView, Runnable {
   
   setupListeners() {
     const raycaster = new THREE.Raycaster();
-    this.visuals.renderer.domElement.onmousemove = (e) => {
-      const x = ( e.clientX / window.innerWidth ) * 2 - 1;
-			const y = - ( e.clientY / window.innerHeight ) * 2 + 1;
+    window.onpointermove = (e) => {
+      const x = (e.clientX / window.innerWidth) * 2 - 1;
+			const y = - (e.clientY / window.innerHeight) * 2 + 1;
 
-			raycaster.setFromCamera( new THREE.Vector2(x, y), this.visuals.camera );
+			raycaster.setFromCamera(new THREE.Vector2(x, y), this.visuals.camera);
       const quakes = this.app.model.quakes.map<THREE.Object3D>(quake => {
         return this.visuals.scene.getObjectByName(
           ThreeNamedObjects.quake + quake._id,
         )!;
       })
-			const intersects = raycaster.intersectObjects( quakes, false );
+      const moonHelper = this.visuals.scene.getObjectByName(ThreeNamedObjects.moonHelper)!;
+			const intersects = raycaster.intersectObjects(
+          [...quakes, moonHelper], false);
       let pointedObject: string | undefined;
-			if ( intersects.length > 0 ) {
-        const quakeMesh = intersects[0].object;
-        pointedObject = quakeMesh.uuid;
-        quakeMesh.scale.set(1.2, 1.2, 1.2);
-        const quakeId = quakeMesh.name.split(":")[1];
-        const quake = this.app.model.quakes.find(q => q._id == quakeId);
-        this.visuals.guiApp!.innerHTML = quakeInfo(quake, {x: e.pageX, y: e.pageY});
+			if (intersects.length > 0) {
+        const pointedMesh = intersects[0].object;
+        document.body.style.cursor = "pointer";
+        if (pointedMesh.name.startsWith(ThreeNamedObjects.quake)) {
+          pointedObject = pointedMesh.uuid;
+          pointedMesh.scale.set(1.2, 1.2, 1.2);
+          const quakeId = pointedMesh.name.split(":")[1];
+          const quake = this.app.model.quakes.find(q => q._id == quakeId);
+          this.visuals.guiComponents.quakeInfo!.innerHTML =
+            appTemplates.quakeInfo(quake, {x: e.pageX, y: e.pageY});
+        } else {
+          this.visuals.guiComponents.quakeInfo!.innerHTML = "";
+        }
 			} else {
-        this.visuals.guiApp!.innerHTML = "";
+        document.body.style.cursor = "auto";
+        this.visuals.guiComponents.quakeInfo!.innerHTML = "";
       }
       this.app.model.quakes.forEach(quake => {
         const q = this.visuals.scene.getObjectByName(
@@ -209,6 +240,62 @@ export class AppView implements MVCView, Runnable {
         )!;
         if (q.uuid != pointedObject) q.scale.set(1, 1, 1);
       })
+    }
+    
+    let downTime = Date.now();
+    window.onpointerdown = () => {
+      downTime = Date.now();
+    }
+
+    window.onpointerup = (e) => {
+      if ((Date.now() - downTime) > this.app.config.camera.maximumClickTime) return;
+      const x = (e.clientX / window.innerWidth) * 2 - 1;
+			const y = - (e.clientY / window.innerHeight) * 2 + 1;
+
+			raycaster.setFromCamera(new THREE.Vector2(x, y), this.visuals.camera);
+      const quakes = this.app.model.quakes.map<THREE.Object3D>(quake => {
+        return this.visuals.scene.getObjectByName(
+          ThreeNamedObjects.quake + quake._id,
+        )!;
+      })
+      const moonHelper = this.visuals.scene.getObjectByName(ThreeNamedObjects.moonHelper)!;
+			const intersects = raycaster.intersectObjects(
+          [...quakes, moonHelper], false);
+			if (intersects.length > 0) {
+        const pointedMesh = intersects[0].object;
+        const angles = new THREE.Vector3(0, 0, 0);
+        const cameraDistance = this.visuals.camera.position.distanceTo(
+          new THREE.Vector3(0, 0, 0),
+        );
+        if (pointedMesh.name.startsWith(ThreeNamedObjects.quake)) {
+          const point = pointedMesh.position;
+          const r = this.app.config.moon.generalView.helperRadius;
+          angles.set(
+            point.x / r,
+            point.y / r,
+            point.z / r,
+          );
+        } else if (pointedMesh.name === ThreeNamedObjects.moonHelper) {
+          const point = intersects[0].point;
+          const r = this.app.config.moon.generalView.helperRadius;
+          angles.set(
+            point.x / r,
+            point.y / r,
+            point.z / r,
+          );
+        }
+        this.visuals.controls!.enabled = false;
+        gsap.to(this.visuals.camera.position, {
+          x: angles.x * cameraDistance,
+          y: angles.y * cameraDistance,
+          z: angles.z * cameraDistance,
+          duration: 0.5,
+          ease: "rough",
+          onComplete: () => {
+            this.visuals.controls!.enabled = true;
+          }
+        })
+      }
     }
     
     window.onresize = () => {
@@ -219,14 +306,17 @@ export class AppView implements MVCView, Runnable {
   }
 
   setupGUIApp() {
-    this.visuals.guiApp = document.createElement("div");
-    this.visuals.guiApp.id = "app";
-    document.body.appendChild(this.visuals.guiApp);
+    Object.values(AppComponents).forEach(id => {
+      const component = document.createElement("div");
+      component.id = id;
+      document.body.appendChild(component);
+      this.visuals.guiComponents![id] = component;
+    });
     this.setupListeners();
   }
 
   updateQuakesPositions(quake: {latitude: number, longitude: number}, quakeMesh: THREE.Mesh) {
-      const r = this.app.config.moon.generalView.radius + this.app.config.quakes.markerHeight / 2;
+      const r = this.app.config.moon.generalView.radius;
       const c = {lat: quake.latitude, lon: quake.longitude}
       quakeMesh.position.set(
         r * Math.sin(Math.PI / 2 - degreesToRadians(c.lat)) * Math.sin(degreesToRadians(c.lon)),

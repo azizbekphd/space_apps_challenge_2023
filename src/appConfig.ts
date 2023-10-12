@@ -10,6 +10,7 @@ const appConfig = {
     maxDistance: 200,
     zoomSpeed: 0.3,
     rotateSpeed: 0.3,
+    maximumClickTime: 400,
   },
 
   lights: (() => {
@@ -44,6 +45,9 @@ const appConfig = {
       radius: 30,
       widthSegments: 1024,
       heightSegments: 1024,
+      helperRadius: 30,
+      helperWidthSegments: 32,
+      helperHeightSegments: 32,
       colorMap: {
         path: moon_color_map,
       },
