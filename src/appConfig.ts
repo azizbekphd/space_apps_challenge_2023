@@ -44,6 +44,9 @@ const appConfig = {
       radius: 30,
       widthSegments: 1024,
       heightSegments: 1024,
+      helperRadius: 30,
+      helperWidthSegments: 32,
+      helperHeightSegments: 32,
       colorMap: {
         path: moon_color_map,
       },
