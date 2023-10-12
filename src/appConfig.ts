@@ -10,6 +10,7 @@ const appConfig = {
     maxDistance: 200,
     zoomSpeed: 0.3,
     rotateSpeed: 0.3,
+    maximumClickTime: 400,
   },
 
   lights: (() => {

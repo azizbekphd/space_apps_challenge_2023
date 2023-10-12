@@ -8,6 +8,7 @@ import { GUI } from "dat.gui";
 import { colorFromMagnitude } from "../utils/colorFromMagnitude";
 import { degreesToRadians } from "../utils/degreesToRadians";
 import { appTemplates } from "../templates";
+import gsap from "gsap";
 
 enum AppComponents {
   quakeInfo = "quakeInfo",
@@ -203,10 +204,10 @@ export class AppView implements MVCView, Runnable {
   setupListeners() {
     const raycaster = new THREE.Raycaster();
     window.onpointermove = (e) => {
-      const x = ( e.clientX / window.innerWidth ) * 2 - 1;
-			const y = - ( e.clientY / window.innerHeight ) * 2 + 1;
+      const x = (e.clientX / window.innerWidth) * 2 - 1;
+			const y = - (e.clientY / window.innerHeight) * 2 + 1;
 
-			raycaster.setFromCamera( new THREE.Vector2(x, y), this.visuals.camera );
+			raycaster.setFromCamera(new THREE.Vector2(x, y), this.visuals.camera);
       const quakes = this.app.model.quakes.map<THREE.Object3D>(quake => {
         return this.visuals.scene.getObjectByName(
           ThreeNamedObjects.quake + quake._id,
@@ -214,7 +215,7 @@ export class AppView implements MVCView, Runnable {
       })
       const moonHelper = this.visuals.scene.getObjectByName(ThreeNamedObjects.moonHelper)!;
 			const intersects = raycaster.intersectObjects(
-          [...quakes, moonHelper], false );
+          [...quakes, moonHelper], false);
       let pointedObject: string | undefined;
 			if (intersects.length > 0) {
         const pointedMesh = intersects[0].object;
@@ -241,8 +242,60 @@ export class AppView implements MVCView, Runnable {
       })
     }
     
-    window.onpointerdown = (e) => {
-      
+    let downTime = Date.now();
+    window.onpointerdown = () => {
+      downTime = Date.now();
+    }
+
+    window.onpointerup = (e) => {
+      if ((Date.now() - downTime) > this.app.config.camera.maximumClickTime) return;
+      const x = (e.clientX / window.innerWidth) * 2 - 1;
+			const y = - (e.clientY / window.innerHeight) * 2 + 1;
+
+			raycaster.setFromCamera(new THREE.Vector2(x, y), this.visuals.camera);
+      const quakes = this.app.model.quakes.map<THREE.Object3D>(quake => {
+        return this.visuals.scene.getObjectByName(
+          ThreeNamedObjects.quake + quake._id,
+        )!;
+      })
+      const moonHelper = this.visuals.scene.getObjectByName(ThreeNamedObjects.moonHelper)!;
+			const intersects = raycaster.intersectObjects(
+          [...quakes, moonHelper], false);
+			if (intersects.length > 0) {
+        const pointedMesh = intersects[0].object;
+        const angles = new THREE.Vector3(0, 0, 0);
+        const cameraDistance = this.visuals.camera.position.distanceTo(
+          new THREE.Vector3(0, 0, 0),
+        );
+        if (pointedMesh.name.startsWith(ThreeNamedObjects.quake)) {
+          const point = pointedMesh.position;
+          const r = this.app.config.moon.generalView.helperRadius;
+          angles.set(
+            point.x / r,
+            point.y / r,
+            point.z / r,
+          );
+        } else if (pointedMesh.name === ThreeNamedObjects.moonHelper) {
+          const point = intersects[0].point;
+          const r = this.app.config.moon.generalView.helperRadius;
+          angles.set(
+            point.x / r,
+            point.y / r,
+            point.z / r,
+          );
+        }
+        this.visuals.controls!.enabled = false;
+        gsap.to(this.visuals.camera.position, {
+          x: angles.x * cameraDistance,
+          y: angles.y * cameraDistance,
+          z: angles.z * cameraDistance,
+          duration: 0.5,
+          ease: "rough",
+          onComplete: () => {
+            this.visuals.controls!.enabled = true;
+          }
+        })
+      }
     }
     
     window.onresize = () => {
