@@ -138,7 +138,7 @@ export class AppView implements MVCView, Runnable {
           color: colorFromMagnitude(
             quake.magnitude,
             this.app.model.quakes.reduce<any>((a, b) =>
-                Math.max(a.magnitude, b.magnitude), {magnitude: 0}).magnitude
+                a.magnitude > b.magnitude ? a : b, {magnitude: 0}).magnitude
           ),
         }),
       );
