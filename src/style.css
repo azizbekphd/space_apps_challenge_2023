@@ -1,5 +1,5 @@
 :root {
-  font-family: Courier New, Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
+  font-family: Courier New, Inter, system-ui, Avenir, Helvetica, Arial, sans-serif !important;
   line-height: 1.5;
   font-weight: 400;
 
@@ -12,6 +12,11 @@
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   -webkit-text-size-adjust: 100%;
+}
+
+* {
+  font-family: Courier New, Inter, system-ui, Avenir, Helvetica, Arial, sans-serif !important;
+  font-weight: 600;
 }
 
 a {
