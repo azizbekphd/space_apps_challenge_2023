@@ -56,9 +56,12 @@ const appConfig = {
       }
     },
     pointerLight: {
-      intensity: 0.01,
+      intensity: 30,
       color: 0x00ff00,
-      downColor: 0x00ffff,
+      downColor: 0xffff00,
+      distance: 15,
+      decay: 3,
+      bias: 1.04,
     }
   },
 
