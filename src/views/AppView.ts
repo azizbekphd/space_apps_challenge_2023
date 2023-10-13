@@ -9,9 +9,11 @@ import { colorFromMagnitude } from "../utils/colorFromMagnitude";
 import { degreesToRadians } from "../utils/degreesToRadians";
 import { appTemplates } from "../templates";
 import gsap from "gsap";
+import { xyzToLatLong } from "../utils/xyzToLatLong";
 
 enum AppComponents {
   quakeInfo = "quakeInfo",
+  viewportData = "viewportData",
 }
 
 interface ThreeVisuals {
@@ -220,6 +222,7 @@ export class AppView implements MVCView, Runnable {
 			if (intersects.length > 0) {
         const pointedMesh = intersects[0].object;
         document.body.style.cursor = "pointer";
+
         if (pointedMesh.name.startsWith(ThreeNamedObjects.quake)) {
           pointedObject = pointedMesh.uuid;
           pointedMesh.scale.set(1.2, 1.2, 1.2);
@@ -230,6 +233,14 @@ export class AppView implements MVCView, Runnable {
         } else {
           this.visuals.guiComponents.quakeInfo!.innerHTML = "";
         }
+
+        const moonHelper = intersects.find(i => {
+          return i.object.name === ThreeNamedObjects.moonHelper;
+        });
+        if (!moonHelper) return;
+        const coords = xyzToLatLong(moonHelper.point,
+            this.app.config.moon.generalView.helperRadius);
+        this.visuals.guiComponents.viewportData!.innerHTML = appTemplates.viewportData(...coords);
 			} else {
         document.body.style.cursor = "auto";
         this.visuals.guiComponents.quakeInfo!.innerHTML = "";
