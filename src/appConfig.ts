@@ -55,6 +55,11 @@ const appConfig = {
         path: moon_height_map,
       }
     },
+    pointerLight: {
+      intensity: 0.01,
+      color: 0x00ff00,
+      downColor: 0x00ffff,
+    }
   },
 
   quakes: {

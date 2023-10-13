@@ -14,13 +14,14 @@ import { xyzToLatLong } from "../utils/xyzToLatLong";
 enum AppComponents {
   quakeInfo = "quakeInfo",
   viewportData = "viewportData",
+  magnitudeGradient = "magnitudeGradient",
 }
 
 interface ThreeVisuals {
   scene: THREE.Scene;
   camera: THREE.PerspectiveCamera;
   renderer: THREE.WebGLRenderer;
-  guiComponents: {[key in AppComponents]?: Element};
+  guiComponents: {[key in AppComponents]?: HTMLElement};
   controls?: OrbitControls;
   gui?: GUI;
 }
@@ -30,6 +31,7 @@ enum ThreeNamedObjects {
   moon = "moon",
   moonHelper = "moonHelper",
   quake = "quake:",
+  pointerProjection = "pointerProjection",
 }
 
 enum GUIFieldNames {
@@ -180,7 +182,9 @@ export class AppView implements MVCView, Runnable {
         this.visuals.scene.getObjectByName(
           ThreeNamedObjects.quake + quake._id,
         )!.visible = visible;
-      })
+      });
+      this.visuals.guiComponents.magnitudeGradient!.style!.display =
+        visible ? "block" : "none";
     });
     generalFolder.add(fields, GUIFieldNames.reliefScale, 0, 8).onChange(scale => {
       const moon = this.visuals.scene.getObjectByName(ThreeNamedObjects.moon) as THREE.Mesh;
@@ -204,6 +208,18 @@ export class AppView implements MVCView, Runnable {
   }
   
   setupListeners() {
+    window.onload = () => {
+      const magnitudeGradient = document.createElement("div");
+      magnitudeGradient.innerHTML = appTemplates.magnitudeGradient({
+        visible: true,
+        min: 0,
+        max: this.app.model.quakes.reduce<any>((a, b) =>
+          a.magnitude > b.magnitude ? a : b, {magnitude: 0}).magnitude,
+      });
+      document.body.appendChild(magnitudeGradient);
+      this.visuals.guiComponents.magnitudeGradient = magnitudeGradient;
+    }
+
     const raycaster = new THREE.Raycaster();
     window.onpointermove = (e) => {
       const x = (e.clientX / window.innerWidth) * 2 - 1;
@@ -244,6 +260,7 @@ export class AppView implements MVCView, Runnable {
 			} else {
         document.body.style.cursor = "auto";
         this.visuals.guiComponents.quakeInfo!.innerHTML = "";
+        this.visuals.guiComponents.viewportData!.innerHTML = "";
       }
       this.app.model.quakes.forEach(quake => {
         const q = this.visuals.scene.getObjectByName(
