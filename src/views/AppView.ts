@@ -9,16 +9,19 @@ import { colorFromMagnitude } from "../utils/colorFromMagnitude";
 import { degreesToRadians } from "../utils/degreesToRadians";
 import { appTemplates } from "../templates";
 import gsap from "gsap";
+import { xyzToLatLong } from "../utils/xyzToLatLong";
 
 enum AppComponents {
   quakeInfo = "quakeInfo",
+  viewportData = "viewportData",
+  magnitudeGradient = "magnitudeGradient",
 }
 
 interface ThreeVisuals {
   scene: THREE.Scene;
   camera: THREE.PerspectiveCamera;
   renderer: THREE.WebGLRenderer;
-  guiComponents: {[key in AppComponents]?: Element};
+  guiComponents: {[key in AppComponents]?: HTMLElement};
   controls?: OrbitControls;
   gui?: GUI;
 }
@@ -28,6 +31,7 @@ enum ThreeNamedObjects {
   moon = "moon",
   moonHelper = "moonHelper",
   quake = "quake:",
+  pointerHelper = "pointerHelper",
 }
 
 enum GUIFieldNames {
@@ -130,11 +134,11 @@ export class AppView implements MVCView, Runnable {
     this.app.model.quakes.forEach(quake => {
       const quakeMesh = new THREE.Mesh(
         new THREE.BoxGeometry(.5, .5, this.app.config.quakes.markerHeight),
-        new THREE.MeshToonMaterial({
+        new THREE.MeshBasicMaterial({
           color: colorFromMagnitude(
             quake.magnitude,
             this.app.model.quakes.reduce<any>((a, b) =>
-                Math.max(a.magnitude, b.magnitude), {magnitude: 0}).magnitude
+                a.magnitude > b.magnitude ? a : b, {magnitude: 0}).magnitude
           ),
         }),
       );
@@ -149,6 +153,17 @@ export class AppView implements MVCView, Runnable {
     axesHelper.name = ThreeNamedObjects.axesHelper;
     axesHelper.visible = true;
     this.visuals.scene.add(axesHelper);
+
+    const pointerHelperConfig = this.app.config.moon.pointerLight;
+    const pointerHelper = new THREE.PointLight(
+      new THREE.Color(pointerHelperConfig.color),
+      pointerHelperConfig.intensity,
+      pointerHelperConfig.distance,
+      pointerHelperConfig.decay,
+    );
+    pointerHelper.name = ThreeNamedObjects.pointerHelper;
+    pointerHelper.visible = false;
+    this.visuals.scene.add(pointerHelper);
   }
 
   setupObjects() {
@@ -178,7 +193,9 @@ export class AppView implements MVCView, Runnable {
         this.visuals.scene.getObjectByName(
           ThreeNamedObjects.quake + quake._id,
         )!.visible = visible;
-      })
+      });
+      this.visuals.guiComponents.magnitudeGradient!.style!.display =
+        visible ? "block" : "none";
     });
     generalFolder.add(fields, GUIFieldNames.reliefScale, 0, 8).onChange(scale => {
       const moon = this.visuals.scene.getObjectByName(ThreeNamedObjects.moon) as THREE.Mesh;
@@ -202,8 +219,20 @@ export class AppView implements MVCView, Runnable {
   }
   
   setupListeners() {
+    window.onload = () => {
+      const magnitudeGradient = document.createElement("div");
+      magnitudeGradient.innerHTML = appTemplates.magnitudeGradient({
+        visible: true,
+        min: 0,
+        max: this.app.model.quakes.reduce<any>((a, b) =>
+          a.magnitude > b.magnitude ? a : b, {magnitude: 0}).magnitude,
+      });
+      document.body.appendChild(magnitudeGradient);
+      this.visuals.guiComponents.magnitudeGradient = magnitudeGradient;
+    }
+
     const raycaster = new THREE.Raycaster();
-    window.onpointermove = (e) => {
+    const onPointerMove = (e: MouseEvent) => {
       const x = (e.clientX / window.innerWidth) * 2 - 1;
 			const y = - (e.clientY / window.innerHeight) * 2 + 1;
 
@@ -220,6 +249,7 @@ export class AppView implements MVCView, Runnable {
 			if (intersects.length > 0) {
         const pointedMesh = intersects[0].object;
         document.body.style.cursor = "pointer";
+
         if (pointedMesh.name.startsWith(ThreeNamedObjects.quake)) {
           pointedObject = pointedMesh.uuid;
           pointedMesh.scale.set(1.2, 1.2, 1.2);
@@ -230,9 +260,24 @@ export class AppView implements MVCView, Runnable {
         } else {
           this.visuals.guiComponents.quakeInfo!.innerHTML = "";
         }
+
+        const moonHelper = intersects.find(i => {
+          return i.object.name === ThreeNamedObjects.moonHelper;
+        });
+        if (!moonHelper) return;
+        const point = moonHelper.point;
+        const coords = xyzToLatLong(point,
+            this.app.config.moon.generalView.helperRadius);
+        this.visuals.guiComponents.viewportData!.innerHTML = appTemplates.viewportData(...coords);
+        const pointerHelper = this.visuals.scene.getObjectByName(
+          ThreeNamedObjects.pointerHelper) as THREE.PointLight;
+        point.multiplyScalar(this.app.config.moon.pointerLight.bias);
+        pointerHelper.visible = true;
+        pointerHelper.position.set(point.x, point.y, point.z);
 			} else {
         document.body.style.cursor = "auto";
         this.visuals.guiComponents.quakeInfo!.innerHTML = "";
+        this.visuals.guiComponents.viewportData!.innerHTML = "";
       }
       this.app.model.quakes.forEach(quake => {
         const q = this.visuals.scene.getObjectByName(
@@ -241,13 +286,24 @@ export class AppView implements MVCView, Runnable {
         if (q.uuid != pointedObject) q.scale.set(1, 1, 1);
       })
     }
+    window.onpointermove = onPointerMove;
     
     let downTime = Date.now();
     window.onpointerdown = () => {
       downTime = Date.now();
+
+      const pointerHelper = this.visuals.scene.getObjectByName(
+        ThreeNamedObjects.pointerHelper) as THREE.PointLight;
+      pointerHelper.color = new THREE.Color(
+        this.app.config.moon.pointerLight.downColor);
     }
 
     window.onpointerup = (e) => {
+      const pointerHelper = this.visuals.scene.getObjectByName(
+        ThreeNamedObjects.pointerHelper) as THREE.PointLight;
+      pointerHelper.color = new THREE.Color(
+        this.app.config.moon.pointerLight.color);
+
       if ((Date.now() - downTime) > this.app.config.camera.maximumClickTime) return;
       const x = (e.clientX / window.innerWidth) * 2 - 1;
 			const y = - (e.clientY / window.innerHeight) * 2 + 1;
@@ -291,6 +347,9 @@ export class AppView implements MVCView, Runnable {
           z: angles.z * cameraDistance,
           duration: 0.5,
           ease: "rough",
+          onUpdate: () => {
+            onPointerMove(e);
+          },
           onComplete: () => {
             this.visuals.controls!.enabled = true;
           }

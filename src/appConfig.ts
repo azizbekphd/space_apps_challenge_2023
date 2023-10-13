@@ -10,7 +10,7 @@ const appConfig = {
     maxDistance: 200,
     zoomSpeed: 0.3,
     rotateSpeed: 0.3,
-    maximumClickTime: 400,
+    maximumClickTime: 200,
   },
 
   lights: (() => {
@@ -55,6 +55,14 @@ const appConfig = {
         path: moon_height_map,
       }
     },
+    pointerLight: {
+      intensity: 30,
+      color: 0x00ff00,
+      downColor: 0xffff00,
+      distance: 15,
+      decay: 3,
+      bias: 1.04,
+    }
   },
 
   quakes: {
