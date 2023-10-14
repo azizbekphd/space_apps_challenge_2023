@@ -18,7 +18,12 @@ export class AppModel implements MVCModel {
     this.moonAge = args.moonAge;
   }
 
+  updateMoonPhase() {
+    this.app.view.updateMoonAge()
+  }
+
   updateSelectedQuake() {
+    this.app.view.updateSelectedQuake();
     this.app.view.updateMoonAge();
   }
 }
