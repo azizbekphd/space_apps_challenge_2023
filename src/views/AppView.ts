@@ -10,7 +10,6 @@ import { degreesToRadians } from "../utils/degreesToRadians";
 import { appTemplates } from "../templates";
 import gsap from "gsap";
 import { xyzToLatLong } from "../utils/xyzToLatLong";
-import { lunarPhaseFromDate } from "../utils/lunarPhaseFromDate";
 
 enum AppComponents {
   quakeInfo = "quakeInfo",
@@ -299,6 +298,9 @@ export class AppView implements MVCView, Runnable {
         this.visuals.guiComponents.viewportData!.innerHTML = appTemplates.viewportData(
           {lat: cameraCoords[0], lon: cameraCoords[1]},
         );
+        const pointerHelper = this.visuals.scene.getObjectByName(
+          ThreeNamedObjects.pointerHelper) as THREE.PointLight;
+        pointerHelper.visible = false;
       }
       this.app.model.quakes.forEach(quake => {
         const q = this.visuals.scene.getObjectByName(
@@ -410,9 +412,8 @@ export class AppView implements MVCView, Runnable {
   updateMoonAge() {
     const moonAge = this.app.model.moonAge;
     const sunGroup = this.visuals.scene.getObjectByName(ThreeNamedObjects.sunGroup)!;
-    console.log(moonAge);
     gsap.to(sunGroup.rotation, {
-      y: (moonAge - 1) * Math.PI * 2,
+      y: ((moonAge + 0.5) * Math.PI * 2) % (Math.PI * 2),
       duration: this.app.config.camera.animationDuration,
       ease: "rough",
     });
