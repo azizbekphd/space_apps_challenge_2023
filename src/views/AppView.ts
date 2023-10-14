@@ -4,7 +4,7 @@ import { App } from "../types/App";
 import { MVCView } from "../types/MVCView";
 import { Runnable } from "../types/Runnable";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
-import { GUI } from "dat.gui";
+import { GUI, GUIController } from "dat.gui";
 import { colorFromMagnitude } from "../utils/colorFromMagnitude";
 import { degreesToRadians } from "../utils/degreesToRadians";
 import { appTemplates } from "../templates";
@@ -23,7 +23,10 @@ interface ThreeVisuals {
   renderer: THREE.WebGLRenderer;
   guiComponents: {[key in AppComponents]?: HTMLElement};
   controls?: OrbitControls;
-  gui?: GUI;
+  gui?: {
+    gui: GUI;
+    controllers: {[key in GUIFieldNames]?: GUIController};
+  };
 }
 
 enum ThreeNamedObjects {
@@ -33,6 +36,7 @@ enum ThreeNamedObjects {
   quake = "quake:",
   pointerHelper = "pointerHelper",
   sunGroup = "sunGroup",
+  selectedQuakeHelper = "selectedQuakeHelper",
 }
 
 enum GUIFieldNames {
@@ -41,6 +45,7 @@ enum GUIFieldNames {
   reliefScale = "Relief scale",
   ambientLightIntensity = "Ambient light",
   directionalLightIntensity = "Directional light",
+  moonPhase = "Moon phase",
 }
 
 type GUIFields = {
@@ -49,6 +54,7 @@ type GUIFields = {
   [GUIFieldNames.reliefScale]: number,
   [GUIFieldNames.ambientLightIntensity]: number,
   [GUIFieldNames.directionalLightIntensity]: number,
+  [GUIFieldNames.moonPhase]: number,
 }
 
 export class AppView implements MVCView, Runnable {
@@ -189,10 +195,14 @@ export class AppView implements MVCView, Runnable {
       [GUIFieldNames.reliefScale]: 1,
       [GUIFieldNames.ambientLightIntensity]: 0.02,
       [GUIFieldNames.directionalLightIntensity]: 1,
+      [GUIFieldNames.moonPhase]: 0,
     }
 
-    this.visuals.gui = new GUI();
-    const generalFolder = this.visuals.gui?.addFolder("General");
+    this.visuals.gui = {
+      gui: new GUI(),
+      controllers: {},
+    };
+    const generalFolder = this.visuals.gui?.gui?.addFolder("General");
     const axesHelper = this.visuals.scene.getObjectByName(ThreeNamedObjects.axesHelper)!;
     generalFolder.add(fields, GUIFieldNames.axesHelper).onChange(visible => {
       axesHelper.visible = visible;
@@ -212,7 +222,7 @@ export class AppView implements MVCView, Runnable {
       (moon.material as THREE.MeshStandardMaterial).displacementBias = - scale / 2;
     });
 
-    const lightsFolder = this.visuals.gui?.addFolder("Lights");
+    const lightsFolder = this.visuals.gui?.gui?.addFolder("Lights");
     lightsFolder.add(fields, GUIFieldNames.ambientLightIntensity, 0, 2, 0.02).onChange(intensity => {
       const ambientLight =
         this.visuals.scene.getObjectByProperty("type", "AmbientLight") as THREE.AmbientLight;
@@ -224,7 +234,13 @@ export class AppView implements MVCView, Runnable {
       ambientLight.intensity = intensity;
     });
 
-    this.visuals.gui?.open();
+    const advancedFolder = this.visuals.gui?.gui?.addFolder("Advanced");
+    this.visuals.gui!.controllers![GUIFieldNames.moonPhase] =
+    advancedFolder.add(fields, GUIFieldNames.moonPhase, 0, 100, 1).onChange(phase => {
+      this.app.controller.setMoonPhase(phase);
+    });
+
+    this.visuals.gui?.gui?.open();
   }
   
   setupListeners() {
@@ -409,14 +425,22 @@ export class AppView implements MVCView, Runnable {
       quakeMesh.lookAt(0, 0, 0);
   }
 
+  updateSelectedQuake() {
+    const selectedQuake = this.app.model.selectedQuake;
+    if (selectedQuake === null) {
+
+    }
+  }
+
   updateMoonAge() {
     const moonAge = this.app.model.moonAge;
     const sunGroup = this.visuals.scene.getObjectByName(ThreeNamedObjects.sunGroup)!;
     gsap.to(sunGroup.rotation, {
-      y: ((moonAge + 0.5) * Math.PI * 2) % (Math.PI * 2),
+      y: ((moonAge + 0.5) * Math.PI * 2),
       duration: this.app.config.camera.animationDuration,
       ease: "rough",
     });
+    // this.visuals.gui!.controllers[GUIFieldNames.moonPhase]!.setValue(moonAge * 100);
   }
 
   animate() {

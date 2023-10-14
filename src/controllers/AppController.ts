@@ -11,6 +11,11 @@ export class AppController implements MVCController {
     this.app = app;
   }
 
+  setMoonPhase (phase: number) {
+    this.app.model.moonAge = phase / 100;
+    this.app.model.updateMoonPhase();
+  }
+
   selectQuake (quakeId: string) {
     const model = this.app.model;
     const quake: Quake = model.quakes.find((quake) => quake._id === quakeId)!;
