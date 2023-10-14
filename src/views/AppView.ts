@@ -10,6 +10,7 @@ import { degreesToRadians } from "../utils/degreesToRadians";
 import { appTemplates } from "../templates";
 import gsap from "gsap";
 import { xyzToLatLong } from "../utils/xyzToLatLong";
+import { lunarPhaseFromDate } from "../utils/lunarPhaseFromDate";
 
 enum AppComponents {
   quakeInfo = "quakeInfo",
@@ -32,6 +33,7 @@ enum ThreeNamedObjects {
   moonHelper = "moonHelper",
   quake = "quake:",
   pointerHelper = "pointerHelper",
+  sunGroup = "sunGroup",
 }
 
 enum GUIFieldNames {
@@ -89,6 +91,14 @@ export class AppView implements MVCView, Runnable {
 
   setupLights() {
     this.app.config.lights.forEach(light => {
+      if (light instanceof THREE.DirectionalLight) {
+        const sunGroup = new THREE.Group();
+        sunGroup.name = ThreeNamedObjects.sunGroup;
+        sunGroup.position.set(0, 0, 0);
+        sunGroup.add(light);
+        this.visuals.scene.add(sunGroup);
+        return;
+      }
       this.visuals.scene.add(light);
     });
   }
@@ -342,6 +352,7 @@ export class AppView implements MVCView, Runnable {
             point.y / r,
             point.z / r,
           );
+          this.app.controller.selectQuake(pointedMesh.name.split(":")[1]);
         } else if (pointedMesh.name === ThreeNamedObjects.moonHelper) {
           const point = intersects[0].point;
           const r = this.app.config.moon.generalView.helperRadius;
@@ -356,7 +367,7 @@ export class AppView implements MVCView, Runnable {
           x: angles.x * cameraDistance,
           y: angles.y * cameraDistance,
           z: angles.z * cameraDistance,
-          duration: 0.5,
+          duration: this.app.config.camera.animationDuration,
           ease: "rough",
           onUpdate: () => {
             onPointerMove(e);
@@ -394,6 +405,17 @@ export class AppView implements MVCView, Runnable {
         r * Math.sin(Math.PI / 2 - degreesToRadians(c.lat)) * Math.cos(degreesToRadians(c.lon)),
       );
       quakeMesh.lookAt(0, 0, 0);
+  }
+
+  updateMoonAge() {
+    const moonAge = this.app.model.moonAge;
+    const sunGroup = this.visuals.scene.getObjectByName(ThreeNamedObjects.sunGroup)!;
+    console.log(moonAge);
+    gsap.to(sunGroup.rotation, {
+      y: (moonAge - 1) * Math.PI * 2,
+      duration: this.app.config.camera.animationDuration,
+      ease: "rough",
+    });
   }
 
   animate() {

@@ -11,6 +11,7 @@ const appConfig = {
     zoomSpeed: 0.3,
     rotateSpeed: 0.3,
     maximumClickTime: 200,
+    animationDuration: 0.5,
   },
 
   lights: (() => {
@@ -20,10 +21,10 @@ const appConfig = {
       new THREE.Color(0xffffff),
       1,
     );
-    sunlight.position.set(0, 0, 300);
+    sunlight.position.set(0, 0, 600);
     const sunlightColor = 0xfdfbd8;
     const sun = new THREE.Mesh(
-      new THREE.SphereGeometry(1, 64, 64),
+      new THREE.SphereGeometry(2, 64, 64),
       new THREE.MeshBasicMaterial({
         color: sunlightColor,
       }),
