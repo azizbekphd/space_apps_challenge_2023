@@ -301,11 +301,19 @@ export class AppView implements MVCView, Runnable {
         if (pointedMesh.name.startsWith(ThreeNamedObjects.quake)) {
           pointedObject = pointedMesh.uuid;
           pointedMesh.scale.set(1.2, 1.2, 1.2);
+          const pointerHelper = this.visuals.scene.getObjectByName(
+            ThreeNamedObjects.pointerHelper)! as THREE.PointLight;
+          pointerHelper.color = ((pointedMesh as
+            THREE.Mesh).material as THREE.MeshBasicMaterial).color;
           const quakeId = pointedMesh.name.split(":")[1];
           const quake = this.app.model.quakes.find(q => q._id == quakeId);
           this.visuals.guiComponents.quakeInfo!.innerHTML =
             appTemplates.quakeInfo(quake, {x: e.pageX, y: e.pageY});
         } else {
+          const pointerHelper = this.visuals.scene.getObjectByName(
+            ThreeNamedObjects.pointerHelper)! as THREE.PointLight;
+          pointerHelper.color = new THREE.Color(
+            this.app.config.moon.pointerLight.color);
           this.visuals.guiComponents.quakeInfo!.innerHTML = "";
         }
 
