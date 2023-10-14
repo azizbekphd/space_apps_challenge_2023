@@ -6,7 +6,6 @@ import { Runnable } from "../types/Runnable";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import { GUI, GUIController } from "dat.gui";
 import { colorFromMagnitude } from "../utils/colorFromMagnitude";
-import { degreesToRadians } from "../utils/degreesToRadians";
 import { appTemplates } from "../templates";
 import gsap from "gsap";
 import { xyzToLatLong } from "../utils/xyzToLatLong";
