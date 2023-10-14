@@ -60,6 +60,7 @@ type GUIFields = {
 export class AppView implements MVCView, Runnable {
   app: App;
   visuals: ThreeVisuals;
+  cache: any;
 
   constructor(app: App) {
     this.app = app;
@@ -71,6 +72,7 @@ export class AppView implements MVCView, Runnable {
     }
     this.visuals.controls = new OrbitControls(this.visuals.camera, this.visuals.renderer.domElement);
     this.animate = this.animate.bind(this);
+    this.cache = {};
   }
 
   setupRenderer() {
@@ -248,6 +250,10 @@ export class AppView implements MVCView, Runnable {
     const advancedFolder = this.visuals.gui?.gui?.addFolder("Advanced");
     this.visuals.gui!.controllers![GUIFieldNames.moonPhase] =
     advancedFolder.add(fields, GUIFieldNames.moonPhase, 0, 100, 1).onChange(phase => {
+      if (this.cache.manualMoonPhaseChange) {
+        this.cache.manualMoonPhaseChange = false;
+        return;
+      }
       this.app.controller.setMoonPhase(phase);
     });
 
@@ -469,11 +475,12 @@ export class AppView implements MVCView, Runnable {
     const moonAge = this.app.model.moonAge;
     const sunGroup = this.visuals.scene.getObjectByName(ThreeNamedObjects.sunGroup)!;
     gsap.to(sunGroup.rotation, {
-      y: ((moonAge + 0.5) * Math.PI * 2),
+      y: - ((moonAge + 0.5) * Math.PI * 2) % (Math.PI * 2),
       duration: this.app.config.camera.animationDuration,
       ease: "rough",
     });
-    // this.visuals.gui!.controllers[GUIFieldNames.moonPhase]!.setValue(moonAge * 100);
+    this.cache.manualMoonPhaseChange = true;
+    this.visuals.gui!.controllers[GUIFieldNames.moonPhase]!.setValue(moonAge * 100);
   }
 
   animate() {
