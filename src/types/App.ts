@@ -6,6 +6,7 @@ import { MVCModel } from "./MVCModel";
 import { MVCView } from "./MVCView";
 import { MVCController } from "./MVCController";
 import { AppConfig } from "./AppConfig";
+import { data } from "../data/data";
 
 interface MVC {
   model: MVCModel;
@@ -20,7 +21,12 @@ export class App implements Runnable, MVC {
   config: AppConfig;
 
   constructor (config: AppConfig) {
-    this.model = new AppModel(this);
+    this.model = new AppModel({
+      app: this,
+      quakes: data,
+      selectedQuake: null,
+      moonAge: 0,
+    });
     this.view = new AppView(this);
     this.controller = new AppController(this);
     this.config = config;

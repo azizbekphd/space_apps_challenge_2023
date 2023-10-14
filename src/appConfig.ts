@@ -11,6 +11,7 @@ const appConfig = {
     zoomSpeed: 0.3,
     rotateSpeed: 0.3,
     maximumClickTime: 200,
+    animationDuration: 0.5,
   },
 
   lights: (() => {
@@ -20,15 +21,43 @@ const appConfig = {
       new THREE.Color(0xffffff),
       1,
     );
-    sunlight.position.set(0, 0, 300);
-    const sunlightColor = 0xfdfbd8;
+    sunlight.position.set(0, 0, 600);
+    const sunlightColor = 0xffdd00;
     const sun = new THREE.Mesh(
-      new THREE.SphereGeometry(1, 64, 64),
+      new THREE.SphereGeometry(2, 64, 64),
       new THREE.MeshBasicMaterial({
         color: sunlightColor,
       }),
     );
     sunlight.add(sun);
+
+    const sunGlowings = [
+      new THREE.Mesh(
+        new THREE.SphereGeometry(10, 64, 64),
+        new THREE.MeshBasicMaterial({
+          color: sunlightColor,
+          transparent: true,
+          opacity: 0.2,
+        }),
+      ),
+      new THREE.Mesh(
+        new THREE.SphereGeometry(20, 64, 64),
+        new THREE.MeshBasicMaterial({
+          color: sunlightColor,
+          transparent: true,
+          opacity: 0.1,
+        }),
+      ),
+      new THREE.Mesh(
+        new THREE.SphereGeometry(40, 64, 64),
+        new THREE.MeshBasicMaterial({
+          color: sunlightColor,
+          transparent: true,
+          opacity: 0.05,
+        }),
+      ),
+    ];
+    sunGlowings.forEach(g => sunlight.add(g));
     lights.push(sunlight);
 
     const ambient = new THREE.AmbientLight(
