@@ -266,9 +266,15 @@ export class AppView implements MVCView, Runnable {
         });
         if (!moonHelper) return;
         const point = moonHelper.point;
-        const coords = xyzToLatLong(point,
+        const pointerCoords = xyzToLatLong(point,
             this.app.config.moon.generalView.helperRadius);
-        this.visuals.guiComponents.viewportData!.innerHTML = appTemplates.viewportData(...coords);
+        const cameraCoords = xyzToLatLong(
+          this.visuals.camera.position,
+          this.visuals.camera.position.distanceTo(new THREE.Vector3(0,0,0)));
+        this.visuals.guiComponents.viewportData!.innerHTML = appTemplates.viewportData(
+          {lat: cameraCoords[0], lon: cameraCoords[1]},
+          {lat: pointerCoords[0], lon: pointerCoords[1]},
+        );
         const pointerHelper = this.visuals.scene.getObjectByName(
           ThreeNamedObjects.pointerHelper) as THREE.PointLight;
         point.multiplyScalar(this.app.config.moon.pointerLight.bias);
@@ -277,7 +283,12 @@ export class AppView implements MVCView, Runnable {
 			} else {
         document.body.style.cursor = "auto";
         this.visuals.guiComponents.quakeInfo!.innerHTML = "";
-        this.visuals.guiComponents.viewportData!.innerHTML = "";
+        const cameraCoords = xyzToLatLong(
+          this.visuals.camera.position,
+          this.visuals.camera.position.distanceTo(new THREE.Vector3(0,0,0)));
+        this.visuals.guiComponents.viewportData!.innerHTML = appTemplates.viewportData(
+          {lat: cameraCoords[0], lon: cameraCoords[1]},
+        );
       }
       this.app.model.quakes.forEach(quake => {
         const q = this.visuals.scene.getObjectByName(
