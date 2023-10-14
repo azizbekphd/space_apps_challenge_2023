@@ -25,7 +25,7 @@ export class App implements Runnable, MVC {
       app: this,
       quakes: data,
       selectedQuake: null,
-      moonAge: 0,
+      moonAge: -0.5,
     });
     this.view = new AppView(this);
     this.controller = new AppController(this);

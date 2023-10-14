@@ -206,7 +206,7 @@ export class AppView implements MVCView, Runnable {
       [GUIFieldNames.reliefScale]: 1,
       [GUIFieldNames.ambientLightIntensity]: 0.02,
       [GUIFieldNames.directionalLightIntensity]: 1,
-      [GUIFieldNames.moonPhase]: 0,
+      [GUIFieldNames.moonPhase]: 50,
     }
 
     this.visuals.gui = {
