@@ -10,6 +10,7 @@ import { degreesToRadians } from "../utils/degreesToRadians";
 import { appTemplates } from "../templates";
 import gsap from "gsap";
 import { xyzToLatLong } from "../utils/xyzToLatLong";
+import { latLongToXyz } from "../utils/latLongToXyz";
 
 enum AppComponents {
   quakeInfo = "quakeInfo",
@@ -179,6 +180,17 @@ export class AppView implements MVCView, Runnable {
     pointerHelper.name = ThreeNamedObjects.pointerHelper;
     pointerHelper.visible = false;
     this.visuals.scene.add(pointerHelper);
+
+    const selectedQuakeHelperConfig = this.app.config.quakes.selectedQuakeLight;
+    const selectedQuakeHelper = new THREE.PointLight(
+      new THREE.Color(selectedQuakeHelperConfig.color),
+      pointerHelperConfig.intensity,
+      pointerHelperConfig.distance,
+      pointerHelperConfig.decay,
+    );
+    selectedQuakeHelper.name = ThreeNamedObjects.selectedQuakeHelper;
+    selectedQuakeHelper.visible = false;
+    this.visuals.scene.add(selectedQuakeHelper);
   }
 
   setupObjects() {
@@ -254,6 +266,12 @@ export class AppView implements MVCView, Runnable {
       });
       document.body.appendChild(magnitudeGradient);
       this.visuals.guiComponents.magnitudeGradient = magnitudeGradient;
+      const cameraCoords = xyzToLatLong(
+        this.visuals.camera.position,
+        this.visuals.camera.position.distanceTo(new THREE.Vector3(0,0,0)));
+      this.visuals.guiComponents.viewportData!.innerHTML = appTemplates.viewportData(
+        {lat: cameraCoords[0], lon: cameraCoords[1]},
+      );
     }
 
     const raycaster = new THREE.Raycaster();
@@ -371,7 +389,10 @@ export class AppView implements MVCView, Runnable {
             point.z / r,
           );
           this.app.controller.selectQuake(pointedMesh.name.split(":")[1]);
-        } else if (pointedMesh.name === ThreeNamedObjects.moonHelper) {
+        } else {
+          this.app.controller.selectQuake();
+        }
+        if (pointedMesh.name === ThreeNamedObjects.moonHelper) {
           const point = intersects[0].point;
           const r = this.app.config.moon.generalView.helperRadius;
           angles.set(
@@ -394,6 +415,8 @@ export class AppView implements MVCView, Runnable {
             this.visuals.controls!.enabled = true;
           }
         })
+      } else {
+        this.app.controller.selectQuake();
       }
     }
     
@@ -417,19 +440,30 @@ export class AppView implements MVCView, Runnable {
   updateQuakesPositions(quake: {latitude: number, longitude: number}, quakeMesh: THREE.Mesh) {
       const r = this.app.config.moon.generalView.radius;
       const c = {lat: quake.latitude, lon: quake.longitude}
-      quakeMesh.position.set(
-        r * Math.sin(Math.PI / 2 - degreesToRadians(c.lat)) * Math.sin(degreesToRadians(c.lon)),
-        r * Math.cos(Math.PI / 2 - degreesToRadians(c.lat)),
-        r * Math.sin(Math.PI / 2 - degreesToRadians(c.lat)) * Math.cos(degreesToRadians(c.lon)),
-      );
+      quakeMesh.position.copy(latLongToXyz(c.lat, c.lon, r));
       quakeMesh.lookAt(0, 0, 0);
   }
 
   updateSelectedQuake() {
     const selectedQuake = this.app.model.selectedQuake;
-    if (selectedQuake === null) {
-
+    const helper = this.visuals.scene.getObjectByName(
+      ThreeNamedObjects.selectedQuakeHelper)! as THREE.PointLight;
+    if (!selectedQuake) {
+      helper.visible = false;
+      return;
     }
+    helper.visible = true;
+    helper.color = colorFromMagnitude(
+      selectedQuake.magnitude,
+      this.app.model.quakes.reduce<any>((a, b) =>
+          a.magnitude > b.magnitude ? a : b, {magnitude: 0}).magnitude
+    );
+    helper.position.copy(latLongToXyz(
+      selectedQuake.latitude,
+      selectedQuake.longitude,
+      this.app.config.moon.generalView.helperRadius *
+        this.app.config.quakes.selectedQuakeLight.bias,
+    ));
   }
 
   updateMoonAge() {

@@ -16,13 +16,15 @@ export class AppController implements MVCController {
     this.app.model.updateMoonPhase();
   }
 
-  selectQuake (quakeId: string) {
+  selectQuake (quakeId: string | null = null) {
     const model = this.app.model;
     const quake: Quake = model.quakes.find((quake) => quake._id === quakeId)!;
     model.selectedQuake = quake;
-    const quakeDate = parseDate(
-      quake.year, quake.day, quake.hour, quake.minute, quake.seconds);
-    model.moonAge = lunarPhaseFromDate(quakeDate);
+    if (quake) {
+      const quakeDate = parseDate(
+        quake.year, quake.day, quake.hour, quake.minute, quake.seconds);
+      model.moonAge = lunarPhaseFromDate(quakeDate);
+    }
     model.updateSelectedQuake();
   }
 }

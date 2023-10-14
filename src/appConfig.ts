@@ -96,6 +96,13 @@ const appConfig = {
 
   quakes: {
     markerHeight: 4,
+    selectedQuakeLight: {
+      color: 0xff0000,
+      intensity: 10,
+      distance: 15,
+      decay: 3,
+      bias: 1.02,
+    },
   }
 }
 
