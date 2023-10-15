@@ -1,6 +1,6 @@
 import { Template } from "../types/Template";
 
-export function quakeInfo(quake: any, coords: { x: number, y: number }): Template {
+export function quakeInfo(quake: any): Template {
   const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
     navigator.userAgent
   );
@@ -18,11 +18,11 @@ export function quakeInfo(quake: any, coords: { x: number, y: number }): Templat
     <style>
       .quake-info__desktop {
         position: fixed;
-        background: #333333;
+        background: #33333388;
         padding-right: 20px;
         pointer-events: none;
-        left: ${Math.min(coords.x, window.innerWidth - 250)}px;
-        top: ${Math.min(coords.y, window.innerHeight - 160)}px;
+        left: 15px;
+        top: 15px;
         z-index: 100;
       }
     </style>

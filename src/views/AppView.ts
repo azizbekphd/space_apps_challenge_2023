@@ -312,11 +312,6 @@ export class AppView implements MVCView, Runnable {
             ThreeNamedObjects.pointerHelper)! as THREE.SpotLight;
           pointerHelper.color = ((pointedMesh as
             THREE.Mesh).material as THREE.MeshBasicMaterial).color;
-          const quakeId = pointedMesh.name.split(":")[1];
-          const quake = this.app.model.quakes.find(q => q._id == quakeId);
-          retieveTemplate(
-            this.visuals.guiComponents.quakeInfo!,
-            appTemplates.quakeInfo(quake, {x: e.pageX, y: e.pageY}));
         } else {
           const pointerHelper = this.visuals.scene.getObjectByName(
             ThreeNamedObjects.pointerHelper)! as THREE.SpotLight;
@@ -324,7 +319,7 @@ export class AppView implements MVCView, Runnable {
             e.buttons ?
             this.app.config.moon.pointerLight.downColor :
             this.app.config.moon.pointerLight.color);
-          this.visuals.guiComponents.quakeInfo!.innerHTML = "";
+          this.updateSelectedQuake();
         }
 
         const moonHelper = intersects.find(i => {
@@ -344,15 +339,17 @@ export class AppView implements MVCView, Runnable {
             {lat: cameraCoords[0], lon: cameraCoords[1]},
             {lat: pointerCoords[0], lon: pointerCoords[1]},
           ));
-        const pointerHelper = this.visuals.scene.getObjectByName(
-          ThreeNamedObjects.pointerHelper) as THREE.SpotLight;
-        point.multiplyScalar(this.app.config.moon.pointerLight.factor);
-        pointerHelper.visible = true;
-        pointerHelper.position.set(point.x, point.y, point.z);
-        pointerHelper.lookAt(new THREE.Vector3(0, 0, 0));
+        if (e.pointerType === "mouse" || e.buttons) {
+          const pointerHelper = this.visuals.scene.getObjectByName(
+            ThreeNamedObjects.pointerHelper) as THREE.SpotLight;
+          point.multiplyScalar(this.app.config.moon.pointerLight.factor);
+          pointerHelper.visible = true;
+          pointerHelper.position.set(point.x, point.y, point.z);
+          pointerHelper.lookAt(new THREE.Vector3(0, 0, 0));
+        }
 			} else {
         document.body.style.cursor = "auto";
-        this.visuals.guiComponents.quakeInfo!.innerHTML = "";
+        this.updateSelectedQuake();
         const cameraCoords = xyzToLatLong(
           this.visuals.camera.position,
           this.visuals.camera.position.distanceTo(new THREE.Vector3(0,0,0)));
@@ -441,6 +438,9 @@ export class AppView implements MVCView, Runnable {
           z: angles.z * cameraDistance,
           duration: this.app.config.camera.animationDuration,
           ease: "rough",
+          onUpdate: () => {
+            onPointerMove(e);
+          },
           onComplete: () => {
             this.visuals.controls!.enabled = true;
           }
@@ -454,6 +454,7 @@ export class AppView implements MVCView, Runnable {
       this.visuals.camera.aspect = window.innerWidth / window.innerHeight;
       this.visuals.camera.updateProjectionMatrix();
       this.visuals.renderer.setSize(window.innerWidth, window.innerHeight);
+      this.updateSelectedQuake();
     }
   }
 
@@ -476,6 +477,13 @@ export class AppView implements MVCView, Runnable {
 
   updateSelectedQuake() {
     const selectedQuake = this.app.model.selectedQuake;
+    if (selectedQuake) {
+      retieveTemplate(
+        this.visuals.guiComponents.quakeInfo!,
+        appTemplates.quakeInfo(selectedQuake));
+    } else {
+      this.visuals.guiComponents.quakeInfo!.innerHTML = "";
+    }
     const helper = this.visuals.scene.getObjectByName(
       ThreeNamedObjects.selectedQuakeHelper)! as THREE.SpotLight;
     if (!selectedQuake) {
