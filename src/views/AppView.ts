@@ -317,6 +317,8 @@ export class AppView implements MVCView, Runnable {
           const pointerHelper = this.visuals.scene.getObjectByName(
             ThreeNamedObjects.pointerHelper)! as THREE.SpotLight;
           pointerHelper.color = new THREE.Color(
+            e.buttons ?
+            this.app.config.moon.pointerLight.downColor :
             this.app.config.moon.pointerLight.color);
           this.visuals.guiComponents.quakeInfo!.innerHTML = "";
         }
