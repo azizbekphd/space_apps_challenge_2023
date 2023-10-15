@@ -1,5 +1,5 @@
 export function magnitudeGradient(params: {visible: boolean, min: number, max: number}) {
-  return `
+  return [`
   <div class="magnitude-gradient" style="display: ${params.visible ? "block" : "none"}; position: fixed;
       bottom: 25px; right: 15px; width: 20px; height: 150px; overflow: visible;
       font-size: 12px; font-weight: bold;
@@ -31,6 +31,6 @@ export function magnitudeGradient(params: {visible: boolean, min: number, max: n
       }
     }
   </style>
-  `;
+  `];
 }
 

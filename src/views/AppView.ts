@@ -10,11 +10,13 @@ import { appTemplates } from "../templates";
 import gsap from "gsap";
 import { xyzToLatLong } from "../utils/xyzToLatLong";
 import { latLongToXyz } from "../utils/latLongToXyz";
+import { retrieveTemplate } from "../utils/retrieveTemplate";
 
 enum AppComponents {
   quakeInfo = "quakeInfo",
   viewportData = "viewportData",
   magnitudeGradient = "magnitudeGradient",
+  introLoader = "introLoader",
 }
 
 interface ThreeVisuals {
@@ -172,10 +174,12 @@ export class AppView implements MVCView, Runnable {
     this.visuals.scene.add(axesHelper);
 
     const pointerHelperConfig = this.app.config.moon.pointerLight;
-    const pointerHelper = new THREE.PointLight(
+    const pointerHelper = new THREE.SpotLight(
       new THREE.Color(pointerHelperConfig.color),
       pointerHelperConfig.intensity,
       pointerHelperConfig.distance,
+      pointerHelperConfig.angle,
+      pointerHelperConfig.penumbra,
       pointerHelperConfig.decay,
     );
     pointerHelper.name = ThreeNamedObjects.pointerHelper;
@@ -183,11 +187,13 @@ export class AppView implements MVCView, Runnable {
     this.visuals.scene.add(pointerHelper);
 
     const selectedQuakeHelperConfig = this.app.config.quakes.selectedQuakeLight;
-    const selectedQuakeHelper = new THREE.PointLight(
+    const selectedQuakeHelper = new THREE.SpotLight(
       new THREE.Color(selectedQuakeHelperConfig.color),
-      pointerHelperConfig.intensity,
-      pointerHelperConfig.distance,
-      pointerHelperConfig.decay,
+      selectedQuakeHelperConfig.intensity,
+      selectedQuakeHelperConfig.distance,
+      selectedQuakeHelperConfig.angle,
+      selectedQuakeHelperConfig.penumbra,
+      selectedQuakeHelperConfig.decay,
     );
     selectedQuakeHelper.name = ThreeNamedObjects.selectedQuakeHelper;
     selectedQuakeHelper.visible = false;
@@ -254,7 +260,7 @@ export class AppView implements MVCView, Runnable {
         this.cache.manualMoonPhaseChange = false;
         return;
       }
-      this.app.controller.setMoonPhase(phase);
+      this.app.controller.setMoonPhase(100 - phase);
     });
 
     this.visuals.gui?.gui?.open();
@@ -263,24 +269,27 @@ export class AppView implements MVCView, Runnable {
   setupListeners() {
     window.onload = () => {
       const magnitudeGradient = document.createElement("div");
-      magnitudeGradient.innerHTML = appTemplates.magnitudeGradient({
-        visible: true,
-        min: 0,
-        max: this.app.model.quakes.reduce<any>((a, b) =>
-          a.magnitude > b.magnitude ? a : b, {magnitude: 0}).magnitude,
-      });
+      retrieveTemplate(
+        magnitudeGradient,
+        appTemplates.magnitudeGradient({
+          visible: true,
+          min: 0,
+          max: this.app.model.quakes.reduce<any>((a, b) =>
+            a.magnitude > b.magnitude ? a : b, {magnitude: 0}).magnitude,}));
       document.body.appendChild(magnitudeGradient);
       this.visuals.guiComponents.magnitudeGradient = magnitudeGradient;
       const cameraCoords = xyzToLatLong(
         this.visuals.camera.position,
         this.visuals.camera.position.distanceTo(new THREE.Vector3(0,0,0)));
-      this.visuals.guiComponents.viewportData!.innerHTML = appTemplates.viewportData(
-        {lat: cameraCoords[0], lon: cameraCoords[1]},
-      );
+      retrieveTemplate(
+        this.visuals.guiComponents.viewportData!,
+        appTemplates.viewportData(
+          {lat: cameraCoords[0], lon: cameraCoords[1]},));
+      this.visuals.guiComponents[AppComponents.introLoader]!.innerHTML = "";
     }
 
     const raycaster = new THREE.Raycaster();
-    const onPointerMove = (e: MouseEvent) => {
+    const onPointerMove = (e: PointerEvent) => {
       const x = (e.clientX / window.innerWidth) * 2 - 1;
 			const y = - (e.clientY / window.innerHeight) * 2 + 1;
 
@@ -296,57 +305,62 @@ export class AppView implements MVCView, Runnable {
       let pointedObject: string | undefined;
 			if (intersects.length > 0) {
         const pointedMesh = intersects[0].object;
-        document.body.style.cursor = "pointer";
 
         if (pointedMesh.name.startsWith(ThreeNamedObjects.quake)) {
+          document.body.style.cursor = "pointer";
           pointedObject = pointedMesh.uuid;
           pointedMesh.scale.set(1.2, 1.2, 1.2);
           const pointerHelper = this.visuals.scene.getObjectByName(
-            ThreeNamedObjects.pointerHelper)! as THREE.PointLight;
+            ThreeNamedObjects.pointerHelper)! as THREE.SpotLight;
           pointerHelper.color = ((pointedMesh as
             THREE.Mesh).material as THREE.MeshBasicMaterial).color;
-          const quakeId = pointedMesh.name.split(":")[1];
-          const quake = this.app.model.quakes.find(q => q._id == quakeId);
-          this.visuals.guiComponents.quakeInfo!.innerHTML =
-            appTemplates.quakeInfo(quake, {x: e.pageX, y: e.pageY});
         } else {
           const pointerHelper = this.visuals.scene.getObjectByName(
-            ThreeNamedObjects.pointerHelper)! as THREE.PointLight;
+            ThreeNamedObjects.pointerHelper)! as THREE.SpotLight;
           pointerHelper.color = new THREE.Color(
+            e.buttons ?
+            this.app.config.moon.pointerLight.downColor :
             this.app.config.moon.pointerLight.color);
-          this.visuals.guiComponents.quakeInfo!.innerHTML = "";
+          this.updateSelectedQuake();
         }
 
         const moonHelper = intersects.find(i => {
           return i.object.name === ThreeNamedObjects.moonHelper;
         });
         if (!moonHelper) return;
+        document.body.style.cursor = "none";
         const point = moonHelper.point;
         const pointerCoords = xyzToLatLong(point,
             this.app.config.moon.generalView.helperRadius);
         const cameraCoords = xyzToLatLong(
           this.visuals.camera.position,
           this.visuals.camera.position.distanceTo(new THREE.Vector3(0,0,0)));
-        this.visuals.guiComponents.viewportData!.innerHTML = appTemplates.viewportData(
-          {lat: cameraCoords[0], lon: cameraCoords[1]},
-          {lat: pointerCoords[0], lon: pointerCoords[1]},
-        );
-        const pointerHelper = this.visuals.scene.getObjectByName(
-          ThreeNamedObjects.pointerHelper) as THREE.PointLight;
-        point.multiplyScalar(this.app.config.moon.pointerLight.bias);
-        pointerHelper.visible = true;
-        pointerHelper.position.set(point.x, point.y, point.z);
+        retrieveTemplate(
+          this.visuals.guiComponents.viewportData!,
+          appTemplates.viewportData(
+            {lat: cameraCoords[0], lon: cameraCoords[1]},
+            {lat: pointerCoords[0], lon: pointerCoords[1]},
+          ));
+        if (e.pointerType === "mouse" || e.buttons) {
+          const pointerHelper = this.visuals.scene.getObjectByName(
+            ThreeNamedObjects.pointerHelper) as THREE.SpotLight;
+          point.multiplyScalar(this.app.config.moon.pointerLight.factor);
+          pointerHelper.visible = true;
+          pointerHelper.position.set(point.x, point.y, point.z);
+          pointerHelper.lookAt(new THREE.Vector3(0, 0, 0));
+        }
 			} else {
         document.body.style.cursor = "auto";
-        this.visuals.guiComponents.quakeInfo!.innerHTML = "";
+        this.updateSelectedQuake();
         const cameraCoords = xyzToLatLong(
           this.visuals.camera.position,
           this.visuals.camera.position.distanceTo(new THREE.Vector3(0,0,0)));
-        this.visuals.guiComponents.viewportData!.innerHTML = appTemplates.viewportData(
-          {lat: cameraCoords[0], lon: cameraCoords[1]},
-        );
+        retrieveTemplate(
+          this.visuals.guiComponents.viewportData!,
+          appTemplates.viewportData(
+            {lat: cameraCoords[0], lon: cameraCoords[1]}));
         const pointerHelper = this.visuals.scene.getObjectByName(
-          ThreeNamedObjects.pointerHelper) as THREE.PointLight;
+          ThreeNamedObjects.pointerHelper) as THREE.SpotLight;
         pointerHelper.visible = false;
       }
       this.app.model.quakes.forEach(quake => {
@@ -359,20 +373,25 @@ export class AppView implements MVCView, Runnable {
     window.onpointermove = onPointerMove;
     
     let downTime = Date.now();
-    window.onpointerdown = () => {
+    this.visuals.renderer.domElement.onpointerdown = (e) => {
       downTime = Date.now();
 
+      onPointerMove(e);
       const pointerHelper = this.visuals.scene.getObjectByName(
-        ThreeNamedObjects.pointerHelper) as THREE.PointLight;
+        ThreeNamedObjects.pointerHelper) as THREE.SpotLight;
       pointerHelper.color = new THREE.Color(
         this.app.config.moon.pointerLight.downColor);
     }
 
-    window.onpointerup = (e) => {
+    this.visuals.renderer.domElement.onpointerup = (e: PointerEvent) => {
       const pointerHelper = this.visuals.scene.getObjectByName(
-        ThreeNamedObjects.pointerHelper) as THREE.PointLight;
-      pointerHelper.color = new THREE.Color(
-        this.app.config.moon.pointerLight.color);
+        ThreeNamedObjects.pointerHelper) as THREE.SpotLight;
+      if (e.pointerType === "mouse") {
+        pointerHelper.color = new THREE.Color(
+          this.app.config.moon.pointerLight.color);
+      } else {
+        pointerHelper.visible = false;
+      }
 
       if ((Date.now() - downTime) > this.app.config.camera.maximumClickTime) return;
       const x = (e.clientX / window.innerWidth) * 2 - 1;
@@ -437,6 +456,7 @@ export class AppView implements MVCView, Runnable {
       this.visuals.camera.aspect = window.innerWidth / window.innerHeight;
       this.visuals.camera.updateProjectionMatrix();
       this.visuals.renderer.setSize(window.innerWidth, window.innerHeight);
+      this.updateSelectedQuake();
     }
   }
 
@@ -447,20 +467,32 @@ export class AppView implements MVCView, Runnable {
       document.body.appendChild(component);
       this.visuals.guiComponents![id] = component;
     });
+
+    retrieveTemplate(
+      this.visuals.guiComponents[AppComponents.introLoader]!,
+      appTemplates.introLoader());
+
     this.setupListeners();
   }
 
   updateQuakesPositions(quake: {latitude: number, longitude: number}, quakeMesh: THREE.Mesh) {
-      const r = this.app.config.moon.generalView.radius;
-      const c = {lat: quake.latitude, lon: quake.longitude}
-      quakeMesh.position.copy(latLongToXyz(c.lat, c.lon, r));
-      quakeMesh.lookAt(0, 0, 0);
+    const r = this.app.config.moon.generalView.radius;
+    const c = {lat: quake.latitude, lon: quake.longitude}
+    quakeMesh.position.copy(latLongToXyz(c.lat, c.lon, r));
+    quakeMesh.lookAt(0, 0, 0);
   }
 
   updateSelectedQuake() {
     const selectedQuake = this.app.model.selectedQuake;
+    if (selectedQuake) {
+      retrieveTemplate(
+        this.visuals.guiComponents.quakeInfo!,
+        appTemplates.quakeInfo(selectedQuake));
+    } else {
+      this.visuals.guiComponents.quakeInfo!.innerHTML = "";
+    }
     const helper = this.visuals.scene.getObjectByName(
-      ThreeNamedObjects.selectedQuakeHelper)! as THREE.PointLight;
+      ThreeNamedObjects.selectedQuakeHelper)! as THREE.SpotLight;
     if (!selectedQuake) {
       helper.visible = false;
       return;
@@ -475,20 +507,21 @@ export class AppView implements MVCView, Runnable {
       selectedQuake.latitude,
       selectedQuake.longitude,
       this.app.config.moon.generalView.helperRadius *
-        this.app.config.quakes.selectedQuakeLight.bias,
+        this.app.config.quakes.selectedQuakeLight.factor,
     ));
+    helper.lookAt(new THREE.Vector3(0, 0, 0));
   }
 
   updateMoonAge() {
     const moonAge = this.app.model.moonAge;
     const sunGroup = this.visuals.scene.getObjectByName(ThreeNamedObjects.sunGroup)!;
     gsap.to(sunGroup.rotation, {
-      y: ((moonAge + 0.5) * Math.PI * 2) % (Math.PI * 2),
+      y: ((moonAge + 0.5) * Math.PI * 2),
       duration: this.app.config.camera.animationDuration,
       ease: "rough",
     });
     this.cache.manualMoonPhaseChange = true;
-    this.visuals.gui!.controllers[GUIFieldNames.moonPhase]!.setValue(moonAge * 100);
+    this.visuals.gui!.controllers[GUIFieldNames.moonPhase]!.setValue(100 - moonAge * 100);
   }
 
   animate() {
