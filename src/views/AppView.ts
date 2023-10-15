@@ -487,7 +487,7 @@ export class AppView implements MVCView, Runnable {
     const moonAge = this.app.model.moonAge;
     const sunGroup = this.visuals.scene.getObjectByName(ThreeNamedObjects.sunGroup)!;
     gsap.to(sunGroup.rotation, {
-      y: ((moonAge + 0.5) * Math.PI * 2) % (Math.PI * 2),
+      y: ((moonAge + 0.5) * Math.PI * 2),
       duration: this.app.config.camera.animationDuration,
       ease: "rough",
     });

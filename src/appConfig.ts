@@ -1,6 +1,7 @@
 import * as THREE from "three";
 import moon_color_map from "/textures/moon_color_map.jpg";
 import moon_height_map from "/textures/moon_height_map.jpg";
+import getRandomStarField from "./utils/getRandomStarField";
 
 const appConfig = {
   camera: {
@@ -21,6 +22,14 @@ const appConfig = {
       new THREE.Color(0xffffff),
       1,
     );
+    const skyBox = new THREE.BoxGeometry(1300, 1300, 1300);
+    const skyBoxMaterial = new THREE.MeshBasicMaterial({
+      map: getRandomStarField(600, 2048, 2048),
+    	side: THREE.BackSide
+    });
+    const sky = new THREE.Mesh(skyBox, skyBoxMaterial);
+    sky.position.set(0, 0, -600);
+    sunlight.add(sky);
     sunlight.position.set(0, 0, 600);
     const sunlightColor = 0xffdd00;
     const sun = new THREE.Mesh(
