@@ -300,9 +300,9 @@ export class AppView implements MVCView, Runnable {
       let pointedObject: string | undefined;
 			if (intersects.length > 0) {
         const pointedMesh = intersects[0].object;
-        document.body.style.cursor = "pointer";
 
         if (pointedMesh.name.startsWith(ThreeNamedObjects.quake)) {
+          document.body.style.cursor = "pointer";
           pointedObject = pointedMesh.uuid;
           pointedMesh.scale.set(1.2, 1.2, 1.2);
           const pointerHelper = this.visuals.scene.getObjectByName(
@@ -325,6 +325,7 @@ export class AppView implements MVCView, Runnable {
           return i.object.name === ThreeNamedObjects.moonHelper;
         });
         if (!moonHelper) return;
+        document.body.style.cursor = "none";
         const point = moonHelper.point;
         const pointerCoords = xyzToLatLong(point,
             this.app.config.moon.generalView.helperRadius);
