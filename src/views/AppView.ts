@@ -258,7 +258,7 @@ export class AppView implements MVCView, Runnable {
         this.cache.manualMoonPhaseChange = false;
         return;
       }
-      this.app.controller.setMoonPhase(phase);
+      this.app.controller.setMoonPhase(100 - phase);
     });
 
     this.visuals.gui?.gui?.open();
@@ -494,7 +494,7 @@ export class AppView implements MVCView, Runnable {
       ease: "rough",
     });
     this.cache.manualMoonPhaseChange = true;
-    this.visuals.gui!.controllers[GUIFieldNames.moonPhase]!.setValue(moonAge * 100);
+    this.visuals.gui!.controllers[GUIFieldNames.moonPhase]!.setValue(100 - moonAge * 100);
   }
 
   animate() {
