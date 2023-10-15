@@ -1,7 +1,7 @@
 type LatLon = {lat: number; lon: number};
 
 export function viewportData(camera: LatLon, pointer?: LatLon) {
-  return `
+  return [`
   <div class="viewport-data">
     <table class="viewport-data-table">
       <tr>
@@ -52,6 +52,6 @@ export function viewportData(camera: LatLon, pointer?: LatLon) {
       text-align: right;
     }
   </style>
-  `;
+  `];
 }
 
