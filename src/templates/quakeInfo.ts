@@ -1,7 +1,7 @@
 export function quakeInfo(quake: any, coords: { x: number, y: number }) {
   return `
   <div style="position: fixed; background: #333333;
-      padding-right: 20px;
+      padding-right: 20px; pointer-events: none;
       left: ${Math.min(coords.x, window.innerWidth - 250)}px;
       top: ${Math.min(coords.y, window.innerHeight - 160)}px;
       z-index: 100;

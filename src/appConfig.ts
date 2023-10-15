@@ -85,12 +85,14 @@ const appConfig = {
       }
     },
     pointerLight: {
-      intensity: 30,
+      intensity: 6,
       color: 0xffffff,
       downColor: 0xffff00,
-      distance: 15,
-      decay: 3,
-      bias: 1.04,
+      distance: 0,
+      angle: Math.PI / 4,
+      penumbra: 0,
+      decay: 2,
+      factor: 1.05,
     }
   },
 
@@ -98,10 +100,12 @@ const appConfig = {
     markerHeight: 4,
     selectedQuakeLight: {
       color: 0xff0000,
-      intensity: 10,
-      distance: 15,
-      decay: 3,
-      bias: 1.02,
+      intensity: 6,
+      distance: 0,
+      angle: Math.PI / 4,
+      penumbra: 0,
+      decay: 2,
+      factor: 1.05,
     },
   }
 }
