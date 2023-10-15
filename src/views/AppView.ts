@@ -10,12 +10,13 @@ import { appTemplates } from "../templates";
 import gsap from "gsap";
 import { xyzToLatLong } from "../utils/xyzToLatLong";
 import { latLongToXyz } from "../utils/latLongToXyz";
-import { retieveTemplate } from "../utils/retrieveTemplate";
+import { retrieveTemplate } from "../utils/retrieveTemplate";
 
 enum AppComponents {
   quakeInfo = "quakeInfo",
   viewportData = "viewportData",
   magnitudeGradient = "magnitudeGradient",
+  introLoader = "introLoader",
 }
 
 interface ThreeVisuals {
@@ -268,7 +269,7 @@ export class AppView implements MVCView, Runnable {
   setupListeners() {
     window.onload = () => {
       const magnitudeGradient = document.createElement("div");
-      retieveTemplate(
+      retrieveTemplate(
         magnitudeGradient,
         appTemplates.magnitudeGradient({
           visible: true,
@@ -280,10 +281,11 @@ export class AppView implements MVCView, Runnable {
       const cameraCoords = xyzToLatLong(
         this.visuals.camera.position,
         this.visuals.camera.position.distanceTo(new THREE.Vector3(0,0,0)));
-      retieveTemplate(
+      retrieveTemplate(
         this.visuals.guiComponents.viewportData!,
         appTemplates.viewportData(
           {lat: cameraCoords[0], lon: cameraCoords[1]},));
+      this.visuals.guiComponents[AppComponents.introLoader]!.innerHTML = "";
     }
 
     const raycaster = new THREE.Raycaster();
@@ -333,7 +335,7 @@ export class AppView implements MVCView, Runnable {
         const cameraCoords = xyzToLatLong(
           this.visuals.camera.position,
           this.visuals.camera.position.distanceTo(new THREE.Vector3(0,0,0)));
-        retieveTemplate(
+        retrieveTemplate(
           this.visuals.guiComponents.viewportData!,
           appTemplates.viewportData(
             {lat: cameraCoords[0], lon: cameraCoords[1]},
@@ -353,7 +355,7 @@ export class AppView implements MVCView, Runnable {
         const cameraCoords = xyzToLatLong(
           this.visuals.camera.position,
           this.visuals.camera.position.distanceTo(new THREE.Vector3(0,0,0)));
-        retieveTemplate(
+        retrieveTemplate(
           this.visuals.guiComponents.viewportData!,
           appTemplates.viewportData(
             {lat: cameraCoords[0], lon: cameraCoords[1]}));
@@ -465,20 +467,25 @@ export class AppView implements MVCView, Runnable {
       document.body.appendChild(component);
       this.visuals.guiComponents![id] = component;
     });
+
+    retrieveTemplate(
+      this.visuals.guiComponents[AppComponents.introLoader]!,
+      appTemplates.introLoader());
+
     this.setupListeners();
   }
 
   updateQuakesPositions(quake: {latitude: number, longitude: number}, quakeMesh: THREE.Mesh) {
-      const r = this.app.config.moon.generalView.radius;
-      const c = {lat: quake.latitude, lon: quake.longitude}
-      quakeMesh.position.copy(latLongToXyz(c.lat, c.lon, r));
-      quakeMesh.lookAt(0, 0, 0);
+    const r = this.app.config.moon.generalView.radius;
+    const c = {lat: quake.latitude, lon: quake.longitude}
+    quakeMesh.position.copy(latLongToXyz(c.lat, c.lon, r));
+    quakeMesh.lookAt(0, 0, 0);
   }
 
   updateSelectedQuake() {
     const selectedQuake = this.app.model.selectedQuake;
     if (selectedQuake) {
-      retieveTemplate(
+      retrieveTemplate(
         this.visuals.guiComponents.quakeInfo!,
         appTemplates.quakeInfo(selectedQuake));
     } else {
