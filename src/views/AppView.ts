@@ -291,8 +291,8 @@ export class AppView implements MVCView, Runnable {
 
     const raycaster = new THREE.Raycaster();
     const onPointerMove = (e: PointerEvent) => {
-      const x = (e.clientX / window.innerWidth) * 2 - 1;
-			const y = - (e.clientY / window.innerHeight) * 2 + 1;
+      const x = (e.pageX / window.innerWidth) * 2 - 1;
+			const y = - (e.pageY / window.innerHeight) * 2 + 1;
 
 			raycaster.setFromCamera(new THREE.Vector2(x, y), this.visuals.camera);
       const quakes = this.app.model.quakes.map<THREE.Object3D>(quake => {
@@ -395,8 +395,8 @@ export class AppView implements MVCView, Runnable {
       }
 
       if ((Date.now() - downTime) > this.app.config.camera.maximumClickTime) return;
-      const x = (e.clientX / window.innerWidth) * 2 - 1;
-			const y = - (e.clientY / window.innerHeight) * 2 + 1;
+      const x = (e.pageX / window.innerWidth) * 2 - 1;
+			const y = - (e.pageY / window.innerHeight) * 2 + 1;
 
 			raycaster.setFromCamera(new THREE.Vector2(x, y), this.visuals.camera);
       const quakes = this.app.model.quakes.map<THREE.Object3D>(quake => {
