@@ -9,6 +9,7 @@ const appConfig = {
     distance: 100,
     minDistance: 50,
     maxDistance: 200,
+    enablePan: false,
     zoomSpeed: 0.3,
     rotateSpeed: 0.3,
     maximumClickTime: 200,

@@ -93,6 +93,7 @@ export class AppView implements MVCView, Runnable {
     this.visuals.camera.lookAt(new THREE.Vector3(0, 0, 0));
     this.visuals.controls!.minDistance = this.app.config.camera.minDistance;
     this.visuals.controls!.maxDistance = this.app.config.camera.maxDistance;
+    this.visuals.controls!.enablePan = this.app.config.camera.enablePan;
     this.visuals.controls!.zoomSpeed = this.app.config.camera.zoomSpeed;
     this.visuals.controls!.rotateSpeed = this.app.config.camera.rotateSpeed;
     this.visuals.scene.add(this.visuals.camera);
